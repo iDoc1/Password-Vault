@@ -5,7 +5,7 @@
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QPushButton, \
                             QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QTableWidget, QTableWidgetItem, \
-                            QCheckBox
+                            QCheckBox, QFrame
 from PyQt5.QtGui import QIcon, QPixmap, QFont
 
 
@@ -95,6 +95,9 @@ class MainWindow(QMainWindow):
         self.add_password_screen_widget.account_input.clear()
         self.add_password_screen_widget.password_input.clear()
         self.add_password_screen_widget.reenter_input.clear()
+        self.add_password_screen_widget.generate_widget.special_chars_check.setChecked(False)
+        self.add_password_screen_widget.generate_widget.numbers_check.setChecked(False)
+        self.add_password_screen_widget.generate_widget.case_check.setCheckState(False)
         self.central_widget.setCurrentIndex(2)  # Back to main screen
 
 
@@ -424,6 +427,7 @@ class AddPasswordScreen(QWidget):
 
         # Create a widget to generate a random password
         self.generate_widget = GeneratePasswordWidget()
+        self.generate_widget.generate_button.clicked.connect(self.generate_password)
 
         # Add all widgets to layout
         layout.addWidget(self.instruct_label_widget)
@@ -434,6 +438,17 @@ class AddPasswordScreen(QWidget):
         layout.addWidget(self.generate_widget)
         layout.addWidget(self.buttons_widget)
         self.setLayout(layout)
+
+    def generate_password(self):
+        """
+        Generates a random password and populates the QLineEdit input fields
+        for this object
+        """
+
+        # TODO: Create an actual password generator (different module)
+        test_generated_password = "1123abcPASSword!?"
+        self.password_input.setText(test_generated_password)
+        self.reenter_input.setText(test_generated_password)
 
 
 class GeneratePasswordWidget(QWidget):
