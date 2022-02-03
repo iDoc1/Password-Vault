@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, 
     QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QTableWidget, QTableWidgetItem, \
     QCheckBox, QSpinBox, QMessageBox
 from PyQt5.QtGui import QIcon, QPixmap, QFont
+from password_db_connector import VaultConnection
 
 
 class MainWindow(QMainWindow):
@@ -21,6 +22,9 @@ class MainWindow(QMainWindow):
         """
         super().__init__()
 
+        # Create VaultConnection object
+        self.vault_cnx = VaultConnection()
+
         # Create stacked widget and set central widget
         self.central_widget = QStackedWidget()
         self.setCentralWidget(self.central_widget)
@@ -30,9 +34,13 @@ class MainWindow(QMainWindow):
         self.login_screen_widget.login_button.clicked.connect(self.login_button_click)
         self.login_screen_widget.create_account_button.clicked.connect(self.create_account_button_click)
 
+        # If default password already changed, disable create account button
+        if not self.vault_cnx.test_default_password():
+            self.login_screen_widget.create_account_button.setEnabled(False)
+
         # Create a CreateAccountScreen object and define button slots
         self.create_account_screen_widget = CreateAccountScreen()
-        self.create_account_screen_widget.create_account_button.clicked.connect(self.create_login_button_click)
+        self.create_account_screen_widget.create_account_button.clicked.connect(self.create_account_submit_button_click)
 
         # Create a MainScreen object and define button slots
         self.main_screen_widget = MainScreen(self)  # Set MainWindow as parent widget so parent members can be accessed
@@ -67,9 +75,27 @@ class MainWindow(QMainWindow):
         """
         Attempts to login to master account
         """
-        print("Login attempted")
-        self.central_widget.setCurrentIndex(2)  # To main screen
-        self.setGeometry(600, 500, 550, 400)  # Make window larger
+
+        # Check if user has an account. If not, display message.
+        if self.vault_cnx.test_default_password():
+            self.login_screen_widget.password_incorrect_label.setText("You must create a user account to begin.")
+            self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
+            self.login_screen_widget.login_button.setEnabled(False)  # Disable login button
+            self.login_screen_widget.create_account_button.setEnabled(True)  # Enable create account button
+        else:
+
+            # If password is correct, go to main screen, otherwise display error message
+            if self.vault_cnx.connect_to_db(self.login_screen_widget.password_input.text()):
+
+                # Get master username and display on main screen
+                master_user = self.vault_cnx.get_master_username()
+                self.main_screen_widget.welcome_label.setText("Welcome, " + master_user)
+
+                self.central_widget.setCurrentIndex(2)  # To main screen
+                self.setGeometry(600, 500, 550, 400)  # Make window larger
+            else:
+                self.login_screen_widget.password_incorrect_label.setText("Incorrect password")
+                self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
 
     def create_account_button_click(self):
         """
@@ -79,12 +105,31 @@ class MainWindow(QMainWindow):
         print("Create account")
         self.central_widget.setCurrentIndex(1)
 
-    def create_login_button_click(self):
+    def create_account_submit_button_click(self):
         """
-        Creates a master account and logs user into the main screen
+        Creates a master account and routes the user back to the login screen
         """
-        print("Account created")
-        self.central_widget.setCurrentIndex(0)  # Route back to login page
+
+        username = self.create_account_screen_widget.name_input.text()
+        password_input = self.create_account_screen_widget.password_input.text()
+        reenter_input = self.create_account_screen_widget.reenter_input.text()
+
+        # Check if passwords are the same
+        if password_input != reenter_input:
+            self.create_account_screen_widget.password_match_label.setText("Passwords must match")
+            self.create_account_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        else:
+
+            # Create user account in database
+            self.vault_cnx.create_user(username, password_input)
+
+            # Reset login screen and reroute
+            self.login_screen_widget.password_input.setText("")
+            self.login_screen_widget.login_button.setEnabled(True)  # Re-enable login button
+            self.login_screen_widget.create_account_button.setEnabled(False)  # Disable create account button
+            self.login_screen_widget.password_incorrect_label.setStyleSheet("")  # Reset label color
+            self.login_screen_widget.password_incorrect_label.setText("")
+            self.central_widget.setCurrentIndex(0)  # Route back to login page
 
     def add_password_button_click(self):
         """
@@ -203,8 +248,6 @@ class LoginScreen(QWidget):
 
         # Create label to tell user if password was incorrect
         self.password_incorrect_label = QLabel("")
-        self.password_incorrect_label.setText("Password incorrect. Please enter correct password.")
-        self.password_incorrect_label.setStyleSheet("background-color: yellow;")
 
         # Create login button layout
         self.login_button = QPushButton("Login")
@@ -304,8 +347,6 @@ class CreateAccountScreen(QWidget):
 
         # Create a label to tell user if passwords match or not
         self.password_match_label = QLabel("")
-        self.password_match_label.setText("Passwords must match")
-        self.password_match_label.setStyleSheet("background-color: yellow;")
 
         # Create a button to create account and login
         self.create_account_button = QPushButton("Create Account")
@@ -337,7 +378,7 @@ class MainScreen(QWidget):
 
         # Create welcome label
         welcome_label_layout = QHBoxLayout()
-        self.welcome_label = QLabel("Welcome, " + "<User>")
+        self.welcome_label = QLabel("")
         self.welcome_label.setFont(QFont("Arial", 12))
 
         # Center the welcome label
