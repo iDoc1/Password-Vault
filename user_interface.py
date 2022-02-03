@@ -40,10 +40,12 @@ class MainWindow(QMainWindow):
 
         # Create an AddPasswordScreen object and define button slots
         self.add_password_screen_widget = AddPasswordScreen()
+        self.add_password_screen_widget.add_button.clicked.connect(self.add_password_submit_button_click)
         self.add_password_screen_widget.cancel_button.clicked.connect(self.add_password_cancel_button_click)
 
         # Create an EditPasswordScreen object
         self.edit_password_screen_widget = EditPasswordScreen()
+        self.edit_password_screen_widget.edit_button.clicked.connect(self.edit_password_submit_button_click)
         self.edit_password_screen_widget.cancel_button.clicked.connect(self.edit_password_cancel_button_click)
 
         # Add all screen widgets to stacked widget indexes
@@ -96,11 +98,20 @@ class MainWindow(QMainWindow):
         Creates a new account and password in the database then routes
         back to main screen
         """
-        pass
+        print("Password added to database")
+        self.clear_add_password_fields()
+        self.central_widget.setCurrentIndex(2)  # Route back to main screen
 
     def add_password_cancel_button_click(self):
         """
         Takes user back to main screen after clearing all add screen input fields
+        """
+        self.clear_add_password_fields()
+        self.central_widget.setCurrentIndex(2)  # Back to main screen
+
+    def clear_add_password_fields(self):
+        """
+        Clears all input fields for the add password screen
         """
 
         # Clear user input fields and route back to main screen
@@ -111,11 +122,26 @@ class MainWindow(QMainWindow):
         self.add_password_screen_widget.generate_widget.numbers_check.setChecked(False)
         self.add_password_screen_widget.generate_widget.case_check.setCheckState(False)
         self.add_password_screen_widget.generate_widget.char_length_box.setValue(12)  # Spinbox set to min value
-        self.central_widget.setCurrentIndex(2)  # Back to main screen
+
+    def edit_password_submit_button_click(self):
+        """
+        Modifies the existing password with the inputs that the user
+        entered and updates the database
+        """
+        print("Password updated in database")
+        self.clear_edit_password_fields()
+        self.central_widget.setCurrentIndex(2)  # Route back to main screen
 
     def edit_password_cancel_button_click(self):
         """
         Takes user back to main screen after clearing all edit screen input fields
+        """
+        self.clear_edit_password_fields()
+        self.central_widget.setCurrentIndex(2)
+
+    def clear_edit_password_fields(self):
+        """
+        Clears all input fields for the edit password screen
         """
 
         # Clear user input fields and route back to main screen
@@ -126,7 +152,6 @@ class MainWindow(QMainWindow):
         self.edit_password_screen_widget.generate_widget.numbers_check.setChecked(False)
         self.edit_password_screen_widget.generate_widget.case_check.setCheckState(False)
         self.edit_password_screen_widget.generate_widget.char_length_box.setValue(12)  # Spinbox set to min value
-        self.central_widget.setCurrentIndex(2)
 
 
 class LoginScreen(QWidget):
@@ -424,19 +449,21 @@ class MainScreen(QWidget):
             print("Password deleted")
 
 
-class AddPasswordScreen(QWidget):
+class AddEditPasswordScreen(QWidget):
     """
-    This class defines the add password screen for the GUI
-    where the user can add a password to the database
+    This class defines a super class that allows a user to add
+    a new password, edit an existing password, an generate a
+    random password. This class is meant to be inherited only
+    and is not a standalone class.
     """
 
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout()
+        self.layout = QVBoxLayout()
 
         # Create an instruction label
         instruct_label_layout = QHBoxLayout()
-        self.instruct_label = QLabel("Enter below information to add a new account and password.")
+        self.instruct_label = QLabel("")  # Empty, will be filled in by subclasses
         self.instruct_label.setFont(QFont("Arial", 12))
 
         # Center the instruction label
@@ -491,24 +518,13 @@ class AddPasswordScreen(QWidget):
         self.generate_widget = GeneratePasswordWidget()
         self.generate_widget.generate_button.clicked.connect(self.generate_password)
 
-        # Create buttons to add password or cancel
-        add_cancel_buttons_layout = QHBoxLayout()
-        self.add_button = QPushButton("Add Password")
-        self.cancel_button = QPushButton("Cancel")
-        add_cancel_buttons_layout.addWidget(self.add_button)
-        add_cancel_buttons_layout.addWidget(self.cancel_button)
-        self.buttons_widget = QWidget()
-        self.buttons_widget.setLayout(add_cancel_buttons_layout)
-
         # Add all widgets to layout
-        layout.addWidget(self.instruct_label_widget)
-        layout.addWidget(self.account_widget)
-        layout.addWidget(self.password_widget)
-        layout.addWidget(self.reenter_widget)
-        layout.addWidget(self.password_match_label)
-        layout.addWidget(self.generate_widget)
-        layout.addWidget(self.buttons_widget)
-        self.setLayout(layout)
+        self.layout.addWidget(self.instruct_label_widget)
+        self.layout.addWidget(self.account_widget)
+        self.layout.addWidget(self.password_widget)
+        self.layout.addWidget(self.reenter_widget)
+        self.layout.addWidget(self.password_match_label)
+        self.layout.addWidget(self.generate_widget)
 
     def generate_password(self):
         """
@@ -572,9 +588,36 @@ class GeneratePasswordWidget(QWidget):
         self.setLayout(vertical_layout)
 
 
-class EditPasswordScreen(AddPasswordScreen):
+class AddPasswordScreen(AddEditPasswordScreen):
     """
-    This class is a subclass of the AddPasswordScreen widget.
+    This class is a sublcass of the AddEditPasswordScreen widget.
+    It defines the user interface that allows the user to add a
+    password to the password vault database.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # Change label text
+        self.instruct_label.setText("Enter the below information to add an account and password.")
+
+        # Create buttons to add password or cancel
+        add_cancel_buttons_layout = QHBoxLayout()
+        self.add_button = QPushButton("Add Password")
+        self.cancel_button = QPushButton("Cancel")
+        add_cancel_buttons_layout.addWidget(self.add_button)
+        add_cancel_buttons_layout.addWidget(self.cancel_button)
+        self.buttons_widget = QWidget()
+        self.buttons_widget.setLayout(add_cancel_buttons_layout)
+
+        # Add button to layout
+        self.layout.addWidget(self.buttons_widget)
+        self.setLayout(self.layout)
+
+
+class EditPasswordScreen(AddEditPasswordScreen):
+    """
+    This class is a subclass of the AddEditPasswordScreen widget.
     Instead of allowing the user to add a new password it allows
     the user to update an existing password.
     """
@@ -582,9 +625,21 @@ class EditPasswordScreen(AddPasswordScreen):
     def __init__(self):
         super().__init__()
 
-        # Change label and button text so that this is the edit screen
+        # Change label text
         self.instruct_label.setText("Change the below information to edit an existing account and password.")
-        self.add_button.setText("Update Password")
+
+        # Create buttons to edit password or cancel
+        edit_cancel_buttons_layout = QHBoxLayout()
+        self.edit_button = QPushButton("Edit Password")
+        self.cancel_button = QPushButton("Cancel")
+        edit_cancel_buttons_layout.addWidget(self.edit_button)
+        edit_cancel_buttons_layout.addWidget(self.cancel_button)
+        self.buttons_widget = QWidget()
+        self.buttons_widget.setLayout(edit_cancel_buttons_layout)
+
+        # Add button to layout
+        self.layout.addWidget(self.buttons_widget)
+        self.setLayout(self.layout)
 
 
 def main():
