@@ -133,7 +133,7 @@ class MainWindow(QMainWindow):
 
     def add_password_button_click(self):
         """
-        Takes user to a new screen to add a new password to the vault
+        Takes user to a new screen to add a new password to the database
         """
         print("Add a password")
         self.central_widget.setCurrentIndex(3)

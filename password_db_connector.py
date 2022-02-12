@@ -8,6 +8,7 @@ import mysql.connector
 from mysql.connector import errorcode
 from mysql.connector import connection
 
+
 class VaultConnection:
     """
     Allows the user to connect to and perform CRUD operations on
