@@ -6,7 +6,6 @@
 
 import mysql.connector
 from mysql.connector import errorcode
-from mysql.connector import connection
 
 
 class VaultConnection:
@@ -86,7 +85,7 @@ class VaultConnection:
         Creates a master user with a given name, and a given password
         :param username: name of user
         :param password: master password
-        :return:
+        :return: True if account creation successful, False otherwise
         """
 
         # Connect to database with default password
@@ -101,6 +100,8 @@ class VaultConnection:
                 print("Database does not exist")
             else:
                 print(err)
+
+            return False
         else:
 
             # Insert name of user into master account table
@@ -115,6 +116,7 @@ class VaultConnection:
             # Close connection
             cursor.close()
             cnx.close()
+            return True
 
     def get_master_username(self):
         """
@@ -144,10 +146,36 @@ class VaultConnection:
             row_dict = {"row_id": row_id, "account": account, "password": password}
             result_set.append(row_dict)
 
+        cursor.close()
         return result_set
+
+    def add_new_password(self, account, password):
+        """
+        Adds a new password with the given account name and password
+        to the database
+        :param account: account name to add
+        :param password: password to add
+        :return: True if add successful, False otherwise
+        """
+        try:
+            cursor = self.db_connection.cursor()
+            insert_query = "INSERT INTO PasswordVault.Passwords (accountName, accountPassword) " \
+                           "VALUES (%s, %s);"
+            cursor.execute(insert_query, (account, password))
+
+            self.db_connection.commit()
+            cursor.close()
+
+        except mysql.connector.Error as err:
+            print(err)
+            return False
+
+        else:
+            return True
 
 
 if __name__ == "__main__":
     pw = VaultConnection()
     pw.connect_to_db("password")
     print(pw.fetch_all_passwords())
+

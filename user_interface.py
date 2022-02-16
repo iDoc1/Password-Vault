@@ -13,7 +13,8 @@ from password_db_connector import VaultConnection
 class MainWindow(QMainWindow):
     """
     This class defines the main window for the GUI where all
-    widgets for this application reside
+    widgets for this application reside. Screen switching is
+    handled by this class.
     """
 
     def __init__(self):
@@ -119,7 +120,6 @@ class MainWindow(QMainWindow):
         """
         Creates a master account and routes the user back to the login screen
         """
-
         username = self.create_account_screen_widget.name_input.text()
         password_input = self.create_account_screen_widget.password_input.text()
         reenter_input = self.create_account_screen_widget.reenter_input.text()
@@ -153,9 +153,38 @@ class MainWindow(QMainWindow):
         Creates a new account and password in the database then routes
         back to main screen
         """
-        print("Password added to database")
-        self.clear_add_password_fields()
-        self.central_widget.setCurrentIndex(2)  # Route back to main screen
+        new_account = self.add_password_screen_widget.account_input.text()
+        password_input = self.add_password_screen_widget.password_input.text()
+        reenter_input = self.add_password_screen_widget.reenter_input.text()
+
+        # Check if passwords are the same
+        if password_input != reenter_input:
+            self.add_password_screen_widget.password_match_label.setText("Passwords must match")
+            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+
+        # Check if account name was entered
+        elif len(new_account) == 0:
+            self.add_password_screen_widget.password_match_label.setText("Account name is required")
+            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        elif len(password_input) == 0:
+            self.add_password_screen_widget.password_match_label.setText("Password is required")
+            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        else:
+
+            # Add password to the database
+            add_password_status = self.vault_cnx.add_new_password(new_account, password_input)
+
+            # Check if there was a database error
+            if not add_password_status:
+                self.statusBar().showMessage("Database error while adding password.")
+            else:
+
+                # Refresh main screen data
+                self.main_screen_widget.load_password_data()
+
+                print("Password added to database")
+                self.clear_add_password_fields()
+                self.central_widget.setCurrentIndex(2)  # Route back to main screen
 
     def add_password_cancel_button_click(self):
         """
@@ -177,6 +206,9 @@ class MainWindow(QMainWindow):
         self.add_password_screen_widget.generate_widget.numbers_check.setChecked(False)
         self.add_password_screen_widget.generate_widget.case_check.setCheckState(False)
         self.add_password_screen_widget.generate_widget.char_length_box.setValue(12)  # Spinbox set to min value
+        self.add_password_screen_widget.password_match_label.setText("")
+        self.add_password_screen_widget.password_match_label.setStyleSheet("")
+        self.statusBar().showMessage("Ready")
 
     def edit_password_submit_button_click(self):
         """
@@ -401,6 +433,24 @@ class MainScreen(QWidget):
         self.password_table.verticalHeader().setVisible(False)
         self.password_table.horizontalHeader().setVisible(False)
 
+        # Refresh/add data to table
+        self.load_password_data()
+
+        # Create button to add a password
+        self.add_password_button = QPushButton("Add a new password")
+
+        # Add all widgets to layout
+        layout.addWidget(self.welcome_label_widget)
+        layout.addWidget(self.password_table)
+        layout.addWidget(self.add_password_button)
+
+        self.setLayout(layout)
+
+    def load_password_data(self):
+        """
+        Loads all password data from the database into the table
+        """
+
         # Get table data using database connection
         password_data = self.parent.vault_cnx.fetch_all_passwords()
 
@@ -418,6 +468,7 @@ class MainScreen(QWidget):
         # Populate table data
         table_row = 0
         while table_row < len(password_data):
+            curr_id = password_data[table_row]["row_id"]
             curr_account = password_data[table_row]["account"]
             curr_password = password_data[table_row]["password"]
 
@@ -432,33 +483,25 @@ class MainScreen(QWidget):
             self.password_table.setItem(table_row + 1, 1, QTableWidgetItem(password_hidden))
 
             # Add copy button
-            self.copy_button = QPushButton("Copy")
-            self.password_table.setCellWidget(table_row + 1, 2, self.copy_button)
+            copy_button = QPushButton("Copy")
+            self.password_table.setCellWidget(table_row + 1, 2, copy_button)
 
             # Add edit button with signal connected to a function that displays edit screen
-            self.edit_button = QPushButton("Edit")
-            self.password_table.setCellWidget(table_row + 1, 3, self.edit_button)
-            self.edit_button.clicked.connect(lambda state, account=curr_account, password=curr_password:
-                                             self.edit_password_button_click(account, password))
+            edit_button = QPushButton("Edit")
+            self.password_table.setCellWidget(table_row + 1, 3, edit_button)
+            edit_button.clicked.connect(lambda state, account=curr_account, password=curr_password:
+                                        self.edit_password_button_click(account, password))
 
+            # Add delete button
             self.delete_button = QPushButton("Delete")
-            self.delete_button.clicked.connect(self.delete_button_click)
             self.password_table.setCellWidget(table_row + 1, 4, self.delete_button)
+            self.delete_button.clicked.connect(lambda state, password_id=curr_id, account=curr_account:
+                                               self.delete_button_click(password_id, account))
 
             table_row += 1
 
         # Resize width of first column
         self.password_table.resizeColumnToContents(0)
-
-        # Create button to add a password
-        self.add_password_button = QPushButton("Add a new password")
-
-        # Add all widgets to layout
-        layout.addWidget(self.welcome_label_widget)
-        layout.addWidget(self.password_table)
-        layout.addWidget(self.add_password_button)
-
-        self.setLayout(layout)
 
     def edit_password_button_click(self, account, password):
         """
@@ -471,7 +514,7 @@ class MainScreen(QWidget):
         self.parent.edit_password_screen_widget.reenter_input.setText(password)
         self.parent.central_widget.setCurrentIndex(4)
 
-    def delete_button_click(self):
+    def delete_button_click(self, password_id, account):
         """
         Displays a popup button when the delete button is pressed
         """
@@ -490,7 +533,7 @@ class MainScreen(QWidget):
         # Proceed based on which button was pressed
         if reply_value == QMessageBox.Yes:
             # TODO: Delete password from database
-            print("Password deleted")
+            print("Password for account " + account + " deleted")
 
 
 class AddEditPasswordScreen(QWidget):
@@ -555,8 +598,6 @@ class AddEditPasswordScreen(QWidget):
 
         # Create a label to tell user if passwords match or not
         self.password_match_label = QLabel("")
-        self.password_match_label.setText("Passwords must match")
-        self.password_match_label.setStyleSheet("background-color: yellow;")
 
         # Create a widget to generate a random password
         self.generate_widget = GeneratePasswordWidget()
