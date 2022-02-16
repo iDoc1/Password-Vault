@@ -145,7 +145,6 @@ class MainWindow(QMainWindow):
         """
         Takes user to a new screen to add a new password to the database
         """
-        print("Add a password")
         self.central_widget.setCurrentIndex(3)
 
     def add_password_submit_button_click(self):
@@ -523,7 +522,8 @@ class MainScreen(QWidget):
 
         # Define icon, text, and buttons
         message_box.setIcon(QMessageBox.Information)
-        message_box.setText("Password will be permanently deleted.\nAre you sure you want to delete this password?")
+        message_box.setText("Password for account '" + account + "' will be permanently deleted.\n"
+                                                                 "Are you sure you want to delete this password?")
         message_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         message_box.setDefaultButton(QMessageBox.No)  # No is default button
 
@@ -532,8 +532,16 @@ class MainScreen(QWidget):
 
         # Proceed based on which button was pressed
         if reply_value == QMessageBox.Yes:
-            # TODO: Delete password from database
+
+            # Delete password from database
+            delete_status = self.parent.vault_cnx.delete_password(password_id)
+
+            # Check if deletion was successful
+            if not delete_status:
+                self.parent.statusBar().showMessage("Database error while deleting password.")
+
             print("Password for account " + account + " deleted")
+            self.load_password_data()
 
 
 class AddEditPasswordScreen(QWidget):

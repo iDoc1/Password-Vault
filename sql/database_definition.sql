@@ -26,4 +26,4 @@ DROP USER IF EXISTS 'masterUser'@'localhost';
 CREATE USER IF NOT EXISTS 'masterUser'@'localhost' IDENTIFIED BY 'default';
 
 /* Grant privileges to user to create, read, update, and delete records */
-GRANT SELECT, INSERT, UPDATE ON PasswordVault.* to 'masterUser'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON PasswordVault.* to 'masterUser'@'localhost';

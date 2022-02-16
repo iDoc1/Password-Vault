@@ -137,7 +137,7 @@ class VaultConnection:
         :return: An array of dictionaries of the results
         """
         cursor = self.db_connection.cursor()
-        fetch_all_query = "SELECT * FROM PasswordVault.Passwords;"
+        fetch_all_query = "SELECT * FROM PasswordVault.Passwords ORDER BY accountName;"
         cursor.execute(fetch_all_query)
 
         # Store all results in an array of dictionaries
@@ -163,13 +163,34 @@ class VaultConnection:
                            "VALUES (%s, %s);"
             cursor.execute(insert_query, (account, password))
 
+            # Commit changes
             self.db_connection.commit()
             cursor.close()
 
         except mysql.connector.Error as err:
             print(err)
             return False
+        else:
+            return True
 
+    def delete_password(self, password_id):
+        """
+        Deletes the password in the database with the given id
+        :param password_id: The row id of the password
+        :return: True if deletion successful, False otherwise
+        """
+        try:
+            cursor = self.db_connection.cursor()
+            delete_query = "DELETE FROM PasswordVault.Passwords WHERE id = %s;"
+            cursor.execute(delete_query, (password_id, ))
+
+            # Commit changes
+            self.db_connection.commit()
+            cursor.close()
+
+        except mysql.connector.Error as err:
+            print(err)
+            return False
         else:
             return True
 
@@ -178,4 +199,3 @@ if __name__ == "__main__":
     pw = VaultConnection()
     pw.connect_to_db("password")
     print(pw.fetch_all_passwords())
-
