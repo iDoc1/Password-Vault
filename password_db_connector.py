@@ -49,6 +49,7 @@ class VaultConnection:
         """
         Closes the database connection
         """
+        self.db_connection.close()
 
     def test_db_connection(self, password):
         """
@@ -126,7 +127,27 @@ class VaultConnection:
 
         return cursor.fetchone()[0]
 
+    def fetch_all_passwords(self):
+        """
+        Executes a query to get all passwords from the database and
+        returns the result set. The dictionaries contain the following
+        keys: 'row_id', 'account', 'password'.
+        :return: An array of dictionaries of the results
+        """
+        cursor = self.db_connection.cursor()
+        fetch_all_query = "SELECT * FROM PasswordVault.Passwords;"
+        cursor.execute(fetch_all_query)
+
+        # Store all results in an array of dictionaries
+        result_set = []
+        for (row_id, account, password) in cursor:
+            row_dict = {"row_id": row_id, "account": account, "password": password}
+            result_set.append(row_dict)
+
+        return result_set
+
 
 if __name__ == "__main__":
     pw = VaultConnection()
-    print(pw.get_master_username())
+    pw.connect_to_db("password")
+    print(pw.fetch_all_passwords())
