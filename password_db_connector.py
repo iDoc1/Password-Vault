@@ -194,8 +194,34 @@ class VaultConnection:
         else:
             return True
 
+    def edit_password(self, password_id, account, password):
+        """
+        Updates the password with the given password ID with the given
+        account name and password
+        :param password_id: ID of password to change
+        :param account: new account name
+        :param password: new password
+        :return: True if edit successful, False otherwise
+        """
+        try:
+            cursor = self.db_connection.cursor()
+            delete_query = "UPDATE PasswordVault.Passwords SET accountName = %s, " \
+                           "accountPassword = %s WHERE id = %s;"
+            cursor.execute(delete_query, (account, password, password_id))
+
+            # Commit changes
+            self.db_connection.commit()
+            cursor.close()
+
+        except mysql.connector.Error as err:
+            print(err)
+            return False
+        else:
+            return True
+
 
 if __name__ == "__main__":
     pw = VaultConnection()
     pw.connect_to_db("password")
     print(pw.fetch_all_passwords())
+    print(pw.edit_password(13, "OSU", "oregonstate"))

@@ -165,6 +165,8 @@ class MainWindow(QMainWindow):
         elif len(new_account) == 0:
             self.add_password_screen_widget.password_match_label.setText("Account name is required")
             self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+
+        # Check if password input is empty
         elif len(password_input) == 0:
             self.add_password_screen_widget.password_match_label.setText("Password is required")
             self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
@@ -214,9 +216,41 @@ class MainWindow(QMainWindow):
         Modifies the existing password with the inputs that the user
         entered and updates the database
         """
-        print("Password updated in database")
-        self.clear_edit_password_fields()
-        self.central_widget.setCurrentIndex(2)  # Route back to main screen
+        password_id = self.edit_password_screen_widget.password_id
+        new_account = self.edit_password_screen_widget.account_input.text()
+        password_input = self.edit_password_screen_widget.password_input.text()
+        reenter_input = self.edit_password_screen_widget.reenter_input.text()
+
+        # Check if passwords are the same
+        if password_input != reenter_input:
+            self.edit_password_screen_widget.password_match_label.setText("Passwords must match")
+            self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+
+        # Check if account name was entered
+        elif len(new_account) == 0:
+            self.edit_password_screen_widget.password_match_label.setText("Account name is required")
+            self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+
+        # Check if password input is empty
+        elif len(password_input) == 0:
+            self.edit_password_screen_widget.password_match_label.setText("Password is required")
+            self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        else:
+
+            # Add password to the database
+            edit_password_status = self.vault_cnx.edit_password(password_id, new_account, password_input)
+
+            # Check if there was a database error
+            if not edit_password_status:
+                self.statusBar().showMessage("Database error while adding password.")
+            else:
+
+                # Refresh main screen data
+                self.main_screen_widget.load_password_data()
+
+                print("Password edited in database")
+                self.clear_edit_password_fields()
+                self.central_widget.setCurrentIndex(2)  # Route back to main screen
 
     def edit_password_cancel_button_click(self):
         """
@@ -231,6 +265,7 @@ class MainWindow(QMainWindow):
         """
 
         # Clear user input fields and route back to main screen
+        self.edit_password_screen_widget.password_id = None
         self.edit_password_screen_widget.account_input.clear()
         self.edit_password_screen_widget.password_input.clear()
         self.edit_password_screen_widget.reenter_input.clear()
@@ -238,6 +273,9 @@ class MainWindow(QMainWindow):
         self.edit_password_screen_widget.generate_widget.numbers_check.setChecked(False)
         self.edit_password_screen_widget.generate_widget.case_check.setCheckState(False)
         self.edit_password_screen_widget.generate_widget.char_length_box.setValue(12)  # Spinbox set to min value
+        self.edit_password_screen_widget.password_match_label.setText("")
+        self.edit_password_screen_widget.password_match_label.setStyleSheet("")
+        self.statusBar().showMessage("Ready")
 
 
 class LoginScreen(QWidget):
@@ -488,26 +526,28 @@ class MainScreen(QWidget):
             # Add edit button with signal connected to a function that displays edit screen
             edit_button = QPushButton("Edit")
             self.password_table.setCellWidget(table_row + 1, 3, edit_button)
-            edit_button.clicked.connect(lambda state, account=curr_account, password=curr_password:
-                                        self.edit_password_button_click(account, password))
+            edit_button.clicked.connect(lambda state,
+                                        password_id = curr_id, account=curr_account, password=curr_password:
+                                        self.edit_password_button_click(password_id, account, password))
 
             # Add delete button
-            self.delete_button = QPushButton("Delete")
-            self.password_table.setCellWidget(table_row + 1, 4, self.delete_button)
-            self.delete_button.clicked.connect(lambda state, password_id=curr_id, account=curr_account:
-                                               self.delete_button_click(password_id, account))
+            delete_button = QPushButton("Delete")
+            self.password_table.setCellWidget(table_row + 1, 4, delete_button)
+            delete_button.clicked.connect(lambda state, password_id=curr_id, account=curr_account:
+                                          self.delete_button_click(password_id, account))
 
             table_row += 1
 
         # Resize width of first column
         self.password_table.resizeColumnToContents(0)
 
-    def edit_password_button_click(self, account, password):
+    def edit_password_button_click(self, password_id, account, password):
         """
         Populates the edit screen with the existing account and password and takes
         user to the edit screen
         """
         print("Showing edit screen for account: ", account)
+        self.parent.edit_password_screen_widget.password_id = password_id
         self.parent.edit_password_screen_widget.account_input.setText(account)
         self.parent.edit_password_screen_widget.password_input.setText(password)
         self.parent.edit_password_screen_widget.reenter_input.setText(password)
@@ -717,6 +757,9 @@ class EditPasswordScreen(AddEditPasswordScreen):
 
     def __init__(self):
         super().__init__()
+
+        # Create a data member to store password id
+        self.password_id = None
 
         # Change label text
         self.instruct_label.setText("Change the below information to edit an existing account and password.")
