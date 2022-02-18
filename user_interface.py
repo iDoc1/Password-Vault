@@ -1,13 +1,16 @@
 # Author: Ian Docherty
-# Date: 1/30/2022
 # Description: This module defines all of the classes and methods for the
 #              password vault graphical user interface.
+import threading
+import time
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QPushButton, \
     QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QTableWidget, QTableWidgetItem, \
     QCheckBox, QSpinBox, QMessageBox
 from PyQt5.QtGui import QIcon, QPixmap, QFont
+from PyQt5.QtCore import *
 from password_db_connector import VaultConnection
+import pyperclip
 
 
 class MainWindow(QMainWindow):
@@ -520,14 +523,17 @@ class MainScreen(QWidget):
             self.password_table.setItem(table_row + 1, 1, QTableWidgetItem(password_hidden))
 
             # Add copy button
-            copy_button = QPushButton("Copy")
-            self.password_table.setCellWidget(table_row + 1, 2, copy_button)
+            self.copy_button = QPushButton("Copy")
+            self.password_table.setCellWidget(table_row + 1, 2, self.copy_button)
+            self.copy_button.setToolTip("Copy for 15 seconds")
+            self.copy_button.clicked.connect(lambda state, password=curr_password:
+                                        self.copy_button_click(password))
 
             # Add edit button with signal connected to a function that displays edit screen
             edit_button = QPushButton("Edit")
             self.password_table.setCellWidget(table_row + 1, 3, edit_button)
             edit_button.clicked.connect(lambda state,
-                                        password_id = curr_id, account=curr_account, password=curr_password:
+                                        password_id=curr_id, account=curr_account, password=curr_password:
                                         self.edit_password_button_click(password_id, account, password))
 
             # Add delete button
@@ -540,6 +546,17 @@ class MainScreen(QWidget):
 
         # Resize width of first column
         self.password_table.resizeColumnToContents(0)
+
+    def copy_button_click(self, password):
+        """
+        Copies the given password to the clipboard for 15 seconds then removes
+        it from the clipboard using a background thread
+        """
+        pyperclip.copy(password)
+
+        # Start a new thread to wait 15 seconds then clear clipboard
+        thr = threading.Thread(target=clear_clipboard)
+        thr.start()
 
     def edit_password_button_click(self, password_id, account, password):
         """
@@ -776,6 +793,14 @@ class EditPasswordScreen(AddEditPasswordScreen):
         # Add button to layout
         self.layout.addWidget(self.buttons_widget)
         self.setLayout(self.layout)
+
+
+def clear_clipboard():
+    """
+    Waits 15 seconds then clears the clipboard
+    """
+    time.sleep(15)
+    pyperclip.copy("")
 
 
 def main():

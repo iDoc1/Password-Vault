@@ -1,5 +1,4 @@
 # Author: Ian Docherty
-# Date: 2/1/2022
 # Description: This module defines the VaultConnection class, which allows the
 #              master user to connect to the database and perform CRUD operations
 #              on the database
