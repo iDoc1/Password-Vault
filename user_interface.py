@@ -319,7 +319,7 @@ class LoginScreen(QWidget):
 
         # Create password input and password label widgets
         self.password_input = QLineEdit()
-        self.password_input.setEchoMode(QLineEdit.Password)
+        self.password_input.setEchoMode(QLineEdit.Password)  # Mask password input when typing password
         self.password_input.setPlaceholderText("Enter password")
         self.password_label = QLabel("Password: ")
 
