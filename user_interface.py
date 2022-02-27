@@ -3,14 +3,15 @@
 #              password vault graphical user interface.
 import threading
 import time
-
+import pyperclip
+import rpyc
+from password_db_connector import VaultConnection
+from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QPushButton, \
     QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QTableWidget, QTableWidgetItem, \
     QCheckBox, QSpinBox, QMessageBox
-from PyQt5.QtGui import QIcon, QPixmap, QFont
-from PyQt5.QtCore import *
-from password_db_connector import VaultConnection
-import pyperclip
+
+
 
 
 class MainWindow(QMainWindow):
@@ -88,12 +89,12 @@ class MainWindow(QMainWindow):
                 self.main_screen_widget.add_password_button.clicked.connect(self.add_password_button_click)
 
                 # Create an AddPasswordScreen object and define button slots
-                self.add_password_screen_widget = AddPasswordScreen()
+                self.add_password_screen_widget = AddPasswordScreen(self)
                 self.add_password_screen_widget.add_button.clicked.connect(self.add_password_submit_button_click)
                 self.add_password_screen_widget.cancel_button.clicked.connect(self.add_password_cancel_button_click)
 
                 # Create an EditPasswordScreen object
-                self.edit_password_screen_widget = EditPasswordScreen()
+                self.edit_password_screen_widget = EditPasswordScreen(self)
                 self.edit_password_screen_widget.edit_button.clicked.connect(self.edit_password_submit_button_click)
                 self.edit_password_screen_widget.cancel_button.clicked.connect(self.edit_password_cancel_button_click)
 
@@ -318,6 +319,7 @@ class LoginScreen(QWidget):
 
         # Create password input and password label widgets
         self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.Password)
         self.password_input.setPlaceholderText("Enter password")
         self.password_label = QLabel("Password: ")
 
@@ -609,8 +611,9 @@ class AddEditPasswordScreen(QWidget):
     and is not a standalone class.
     """
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent
         self.layout = QVBoxLayout()
 
         # Create an instruction label
@@ -678,14 +681,27 @@ class AddEditPasswordScreen(QWidget):
 
     def generate_password(self):
         """
-        Generates a random password and populates the QLineEdit input fields
-        for this object
+        Calls the RPyC microservice to generate a password of a specified length
+        that may contain uppercase, numbers, or special characters depending on
+        the user options
         """
 
-        # TODO: Create an actual password generator (different module, microservice?)
-        test_generated_password = "1123abcPASSword!?"
-        self.password_input.setText(test_generated_password)
-        self.reenter_input.setText(test_generated_password)
+        # Get values for password length and user options
+        password_length = self.generate_widget.char_length_box.value()
+        has_special_chars = self.generate_widget.special_chars_check.isChecked()
+        has_number = self.generate_widget.numbers_check.isChecked()
+        has_uppercase = self.generate_widget.case_check.isChecked()
+
+        # Call RPyC microservice to generate password
+        try:
+            conn = rpyc.connect("localhost", 18861)
+            generated_password = conn.root.exposed_get_password(password_length, has_uppercase,
+                                                                has_number, has_special_chars)
+        except ConnectionRefusedError:
+            self.parent.statusBar().showMessage("Error connecting to microservice")
+        else:
+            self.password_input.setText(generated_password)
+            self.reenter_input.setText(generated_password)
 
 
 class GeneratePasswordWidget(QWidget):
@@ -702,6 +718,8 @@ class GeneratePasswordWidget(QWidget):
         # Create a instructional label
         self.generate_label = QLabel("Optional: Automatically generate a secure, random password using below options.\n"
                                      "\tWithout options, password will only contain random lowercase letters.")
+        self.generate_label.setStyleSheet("border-top: 1px solid gray;"
+                                          "border-bottom: 1px solid gray;")
         vertical_layout.addWidget(self.generate_label)
 
         # Create a horizontal layout with checkboxes for password options
@@ -745,8 +763,8 @@ class AddPasswordScreen(AddEditPasswordScreen):
     password to the password vault database.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         # Change label text
         self.instruct_label.setText("Enter the below information to add an account and password.")
@@ -772,8 +790,8 @@ class EditPasswordScreen(AddEditPasswordScreen):
     the user to update an existing password.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         # Create a data member to store password id
         self.password_id = None
