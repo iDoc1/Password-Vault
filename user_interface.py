@@ -1,17 +1,18 @@
 # Author: Ian Docherty
 # Description: This module defines all of the classes and methods for the
 #              password vault graphical user interface.
+
+import password_entropy
 import threading
 import time
 import pyperclip
 import rpyc
 from password_db_connector import VaultConnection
+from PyQt5 import QtCore
 from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QPushButton, \
     QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QTableWidget, QTableWidgetItem, \
-    QCheckBox, QSpinBox, QMessageBox
-
-
+    QCheckBox, QSpinBox, QMessageBox, QProgressBar
 
 
 class MainWindow(QMainWindow):
@@ -642,8 +643,17 @@ class AddEditPasswordScreen(QWidget):
 
         # Create password input and password label widgets
         self.password_input = QLineEdit()
+        self.password_input.textChanged.connect(self.get_password_strength)
         self.password_input.setPlaceholderText("Enter password here")
         self.password_label = QLabel("Password: ")
+
+        # Create progress bar to display password strength
+        self.password_strength_bar = QProgressBar()
+        self.password_strength_bar.setValue(0)
+        self.password_strength_bar.setFormat("Very Weak")
+        self.password_strength_bar.setStyleSheet("QProgressBar::chunk {"
+                                                 "background-color: green; }")
+        self.password_strength_bar.setAlignment(QtCore.Qt.AlignCenter)
 
         # Create horizontal password layout
         password_layout = QHBoxLayout()
@@ -676,6 +686,7 @@ class AddEditPasswordScreen(QWidget):
         self.layout.addWidget(self.account_widget)
         self.layout.addWidget(self.password_widget)
         self.layout.addWidget(self.reenter_widget)
+        self.layout.addWidget(self.password_strength_bar)
         self.layout.addWidget(self.password_match_label)
         self.layout.addWidget(self.generate_widget)
 
@@ -703,6 +714,41 @@ class AddEditPasswordScreen(QWidget):
             self.parent.statusBar().showMessage("Ready")
             self.password_input.setText(generated_password)
             self.reenter_input.setText(generated_password)
+
+    def get_password_strength(self):
+        """
+        This method is called every time the password input field is changed. The
+        password bit entropy is calculated and the corresponding strength is
+        displayed. A very strong password is considered to have 128 entropy bits
+        or more, so the progress bar displays password strength out of 150 bits,
+        which leaves room so that a Strong password is shown to still have room
+        for improvement.
+        """
+        bit_entropy = password_entropy.get_entropy(self.password_input.text())
+        password_strength_text = password_entropy.get_password_strength(bit_entropy)
+
+        # Calculate password strength of out 150h
+        strength_percentage = int((bit_entropy / 150 * 100))
+        if strength_percentage > 100:
+            strength_percentage = 100
+
+        # Change progress bar format and text
+        self.password_strength_bar.setValue(strength_percentage)
+        password_strength_with_bits = password_strength_text + " (" + str(round(bit_entropy, 2)) + " bits)"
+        self.password_strength_bar.setFormat(password_strength_with_bits)
+
+        # Change color depending on password strength
+        if password_strength_text == "Very Weak" or password_strength_text == "Weak":
+            color = "red"
+        elif password_strength_text == "Moderately Strong":
+            color = "yellow"
+        elif password_strength_text == "Strong":
+            color = "#80c342"
+        else:
+            color = "#18b549"
+
+        self.password_strength_bar.setStyleSheet("QProgressBar::chunk {"
+                                                 "background-color: " + color + "; }")
 
 
 class GeneratePasswordWidget(QWidget):
