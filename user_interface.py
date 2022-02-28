@@ -700,6 +700,7 @@ class AddEditPasswordScreen(QWidget):
         except ConnectionRefusedError:
             self.parent.statusBar().showMessage("Error connecting to microservice")
         else:
+            self.parent.statusBar().showMessage("Ready")
             self.password_input.setText(generated_password)
             self.reenter_input.setText(generated_password)
 
