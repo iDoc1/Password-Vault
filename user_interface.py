@@ -241,7 +241,7 @@ class MainWindow(QMainWindow):
             self.edit_password_screen_widget.password_match_label.setText("Password is required")
             self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
         else:
-
+        # TODO: CHeck if password has approved special chars only
             # Add password to the database
             edit_password_status = self.vault_cnx.edit_password(password_id, new_account, password_input)
 
@@ -727,7 +727,7 @@ class AddEditPasswordScreen(QWidget):
         bit_entropy = password_entropy.get_entropy(self.password_input.text())
         password_strength_text = password_entropy.get_password_strength(bit_entropy)
 
-        # Calculate password strength of out 150h
+        # Calculate password strength of out 150 bits
         strength_percentage = int((bit_entropy / 150 * 100))
         if strength_percentage > 100:
             strength_percentage = 100

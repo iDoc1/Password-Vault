@@ -3,12 +3,36 @@
 Portfolio Project for CS 361
 
 ### Background
-Inspired by the KeePass software I currently use at work.
+This app allows a user to create a master password which they can use to access their stored
+passwords for other accounts. Once the user creates a master account, they can log in to the
+app and create, edit, or delete their passwords.
+
+The main functionality of this app is listed below:
+- Allows user to create, read, update, and delete passwords for their accounts
+- Provides user with a way to copy the password to the clipboard for 15 seconds
+- Incorporates a random password generator so users don't have to create their own passwords
+- Provides user with a strength rating of their passwords using the information bit entropy calculation
+
+This app was heavily inspired by the KeePass software I currently use at work.
 
 ### How to Install
+1. Ensure that you have MySQL server installed
+2. Run the "database_definitions.sql" script from the MySQL root account, or a similar
+account that has CREATE privileges.
+3. Install the project dependencies using the below terminal command
+    ~~~
+    pip install -r requirements.txt
+    ~~~
+4. You are now ready to use to app. Simply create a master account and log in to begin.
 
 ### Using the App
-Screenshots
+Below screenshots show a basic overview of the functionality  
+![Login Screen](/screenshots/login_screen.png)  
+![Main Screen](/screenshots/main_screen.png)  
+![Add a weak password](/screenshots/add_weak_password.png)  
+![Add a strong password](/screenshots/add_strong_password.png)  
+![Copy password](/screenshots/copy_password.png)  
+![Edit existing password](/screenshots/edit_password.png)  
 
 ### Discussion: Password Bit Entropy
 The password strength function in this application uses a calculation known
@@ -22,8 +46,9 @@ length L that could be generated using N symbols. Taking the log base 2 of this
 value provides us with the number of bits needed to represent N<sup>L</sup>. The resulting 
 bit value is useful because an increase of 1 bit entropy means that the number of possible 
 unique passwords has doubled, meaning it would take twice as long for a brute force attack 
-to guess the password. Thus, the bit entropy provides a better way for us to compare the
-strength of passwords compared to just N<sup>L</sup> alone.
+to guess the password. The bit entropy value is also much smaller, and, thus, more
+readable than the values of N<sup>L</sup>. So, the bit entropy provides a better way for 
+us to compare the strength of passwords compared to looking at just N<sup>L</sup> alone. 
 
 The actual strength of a password, as determined by its bit entropy value, is somewhat
 subjective, but there are guidelines that have been published discussing this in detail.
@@ -39,7 +64,7 @@ Sources used for above information:
 ### Password Generator Microservice
 The password generator functionality for this app is achieved using my teammate's
 microservice. For the password generator to work, the RPyC server must be running
-on localhost.
+on localhost.  
 Microservice code can be found here: https://github.com/colinjoss/random-string_microservice  
 Author of microservice: @colinjoss
 
