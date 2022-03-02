@@ -29,7 +29,7 @@ account that has CREATE privileges.
 Below screenshots show a basic overview of the functionality  
   
 Login Screen  
-![Login Screen](/screenshots/login_screen.png)  
+![Login Screen](/screenshots/login_screen.png) 
 Main Screen  
 ![Main Screen](/screenshots/main_screen.png)  
 Add a weak password  
@@ -38,7 +38,7 @@ Add a strong password
 ![Add a strong password](/screenshots/add_strong_password.png)  
 Copy a stored password  
 ![Copy password](/screenshots/copy_password.png)  
-Edit an existing passwrod  
+Edit an existing password  
 ![Edit existing password](/screenshots/edit_password.png)  
 
 ### Discussion: Password Bit Entropy
