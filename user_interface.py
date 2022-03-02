@@ -308,7 +308,7 @@ class LoginScreen(QWidget):
 
         # Create welcome label widget
         welcome_label_layout = QHBoxLayout()
-        self.welcome_label = QLabel("   Welcome to your password vault!\nPlease enter your password to login.")
+        self.welcome_label = QLabel("   Welcome to your password vault!\nPlease enter your password to log in.")
         self.welcome_label.setFont(QFont("Arial", 12))
 
         # Center the welcome label
