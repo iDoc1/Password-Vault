@@ -241,7 +241,6 @@ class MainWindow(QMainWindow):
             self.edit_password_screen_widget.password_match_label.setText("Password is required")
             self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
         else:
-        # TODO: CHeck if password has approved special chars only
             # Add password to the database
             edit_password_status = self.vault_cnx.edit_password(password_id, new_account, password_input)
 
