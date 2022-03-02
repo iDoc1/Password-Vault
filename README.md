@@ -29,7 +29,7 @@ account that has CREATE privileges.
 Below screenshots show a basic overview of the functionality  
   
 Login Screen  
-![Login Screen](/screenshots/login_screen.png) 
+![Login Screen](/screenshots/login_screen.png)   
 Main Screen  
 ![Main Screen](/screenshots/main_screen.png)  
 Add a weak password  
