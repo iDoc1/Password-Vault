@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
         self.central_widget = QStackedWidget()
         self.setCentralWidget(self.central_widget)
 
-        # Create a LoginScreen object and define slot button slots
+        # Create a LoginScreen object and define button slots
         self.login_screen_widget = LoginScreen()
         self.login_screen_widget.login_button.clicked.connect(self.attempt_to_login)
         self.login_screen_widget.password_input.returnPressed.connect(self.attempt_to_login)
@@ -64,9 +64,6 @@ class MainWindow(QMainWindow):
         # Add all screen widgets to stacked widget indexes
         self.central_widget.addWidget(self.login_screen_widget)  # Index 0
         self.central_widget.addWidget(self.create_account_screen_widget)  # Index 1
-        # self.central_widget.addWidget(self.main_screen_widget)  # Index 2
-        # self.central_widget.addWidget(self.add_password_screen_widget)  # Index 3
-        # self.central_widget.addWidget(self.edit_password_screen_widget)  # Index 4
         self.central_widget.setCurrentIndex(0)  # Start at LoginScreen
 
         # Set window geometry and show window
