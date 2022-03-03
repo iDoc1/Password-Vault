@@ -310,7 +310,7 @@ class MainWindow(QMainWindow):
 
 class LoginScreen(QWidget):
     """
-    This class defines the login screen from the GUI
+    This class defines the login screen for the GUI
     """
 
     def __init__(self):
