@@ -26,7 +26,11 @@ account that has CREATE privileges.
 4. You are now ready to use to app. Simply create a master account and log in to begin.
 
 ### Using the App
-Below screenshots show a basic overview of the functionality  
+- To run the app, run the "user_interface.py" program.
+- For the password generator to work, the password generator microservice must also
+  be running. Otherwise, the user will be shown an error message. See bottom of README
+  for more notes about the password generator.  
+- The below screenshots show a basic overview of the app's functionality.  
   
 Login Screen  
 ![Login Screen](/screenshots/login_screen.png)   

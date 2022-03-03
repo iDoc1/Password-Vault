@@ -217,10 +217,3 @@ class VaultConnection:
             return False
         else:
             return True
-
-
-if __name__ == "__main__":
-    pw = VaultConnection()
-    pw.connect_to_db("password")
-    print(pw.fetch_all_passwords())
-    print(pw.edit_password(13, "OSU", "oregonstate"))

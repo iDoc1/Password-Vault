@@ -15,6 +15,13 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, 
     QCheckBox, QSpinBox, QMessageBox, QProgressBar
 
 
+# Constants for allowed characters
+LOWERS = "abcdefghijklmnopqrstuvwxyz"
+UPPERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+NUMBERS = '1234567890'
+SPECIALS = '@%+!$?~'
+
+
 class MainWindow(QMainWindow):
     """
     This class defines the main window for the GUI where all
@@ -37,9 +44,9 @@ class MainWindow(QMainWindow):
 
         # Create a LoginScreen object and define slot button slots
         self.login_screen_widget = LoginScreen()
-        self.login_screen_widget.login_button.clicked.connect(self.login_button_click)
-        self.login_screen_widget.password_input.returnPressed.connect(self.login_button_click)
-        self.login_screen_widget.create_account_button.clicked.connect(self.create_account_button_click)
+        self.login_screen_widget.login_button.clicked.connect(self.attempt_to_login)
+        self.login_screen_widget.password_input.returnPressed.connect(self.attempt_to_login)
+        self.login_screen_widget.create_account_button.clicked.connect(self.go_to_create_account_screen)
 
         # If default password already changed, disable create account button
         if not self.vault_cnx.test_default_password():
@@ -47,7 +54,7 @@ class MainWindow(QMainWindow):
 
         # Create a CreateAccountScreen object and define button slots
         self.create_account_screen_widget = CreateAccountScreen()
-        self.create_account_screen_widget.create_account_button.clicked.connect(self.create_account_submit_button_click)
+        self.create_account_screen_widget.create_account_button.clicked.connect(self.attempt_to_create_account)
 
         # Define screens that will not be initialized until user successfully logs in
         self.main_screen_widget = None
@@ -69,7 +76,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Ready")
         self.show()
 
-    def login_button_click(self):
+    def attempt_to_login(self):
         """
         Attempts to login to master account
         """
@@ -87,17 +94,17 @@ class MainWindow(QMainWindow):
 
                 # Create Main Screen widget and define button slot
                 self.main_screen_widget = MainScreen(self)  # Set MainWindow as parent widget
-                self.main_screen_widget.add_password_button.clicked.connect(self.add_password_button_click)
+                self.main_screen_widget.add_password_button.clicked.connect(self.go_to_add_password_screen)
 
                 # Create an AddPasswordScreen object and define button slots
                 self.add_password_screen_widget = AddPasswordScreen(self)
-                self.add_password_screen_widget.add_button.clicked.connect(self.add_password_submit_button_click)
-                self.add_password_screen_widget.cancel_button.clicked.connect(self.add_password_cancel_button_click)
+                self.add_password_screen_widget.add_button.clicked.connect(self.attempt_to_add_password)
+                self.add_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_cancel_add)
 
                 # Create an EditPasswordScreen object
                 self.edit_password_screen_widget = EditPasswordScreen(self)
-                self.edit_password_screen_widget.edit_button.clicked.connect(self.edit_password_submit_button_click)
-                self.edit_password_screen_widget.cancel_button.clicked.connect(self.edit_password_cancel_button_click)
+                self.edit_password_screen_widget.edit_button.clicked.connect(self.attempt_to_edit_password)
+                self.edit_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_cancel_edit)
 
                 self.central_widget.addWidget(self.main_screen_widget)  # Index 2
                 self.central_widget.addWidget(self.add_password_screen_widget)  # Index 3
@@ -113,17 +120,16 @@ class MainWindow(QMainWindow):
                 self.login_screen_widget.password_incorrect_label.setText("Incorrect password")
                 self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
 
-    def create_account_button_click(self):
+    def go_to_create_account_screen(self):
         """
         Creates and shows the CreateAccountScreen widget to allow user
         to create a master account and password
         """
-        print("Create account")
         self.central_widget.setCurrentIndex(1)
 
-    def create_account_submit_button_click(self):
+    def attempt_to_create_account(self):
         """
-        Creates a master account and routes the user back to the login screen
+        Attempts to create a master account then route the user back to the login screen
         """
         username = self.create_account_screen_widget.name_input.text()
         password_input = self.create_account_screen_widget.password_input.text()
@@ -146,16 +152,16 @@ class MainWindow(QMainWindow):
             self.login_screen_widget.password_incorrect_label.setText("")
             self.central_widget.setCurrentIndex(0)  # Route back to login page
 
-    def add_password_button_click(self):
+    def go_to_add_password_screen(self):
         """
         Takes user to a new screen to add a new password to the database
         """
         self.central_widget.setCurrentIndex(3)
 
-    def add_password_submit_button_click(self):
+    def attempt_to_add_password(self):
         """
         Creates a new account and password in the database then routes
-        back to main screen
+        back to main screen if there are no issues with use inputs
         """
         new_account = self.add_password_screen_widget.account_input.text()
         password_input = self.add_password_screen_widget.password_input.text()
@@ -175,6 +181,11 @@ class MainWindow(QMainWindow):
         elif len(password_input) == 0:
             self.add_password_screen_widget.password_match_label.setText("Password is required")
             self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+
+        elif self.contains_unapproved_specials(password_input):
+            self.add_password_screen_widget.password_match_label.setText("Password can only have the "
+                                                                         "following special characters: " + SPECIALS)
+            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
         else:
 
             # Add password to the database
@@ -192,7 +203,20 @@ class MainWindow(QMainWindow):
                 self.clear_add_password_fields()
                 self.central_widget.setCurrentIndex(2)  # Route back to main screen
 
-    def add_password_cancel_button_click(self):
+    @staticmethod
+    def contains_unapproved_specials(password):
+        """
+        Returns True if the given password contains special characters not in
+        the approved special characters constant SPECIALS
+        """
+        for char in password:
+            if char not in LOWERS and char not in UPPERS and char not in NUMBERS:
+                if char not in SPECIALS:
+                    return True
+
+        return False
+
+    def go_to_main_screen_cancel_add(self):
         """
         Takes user back to main screen after clearing all add screen input fields
         """
@@ -216,10 +240,10 @@ class MainWindow(QMainWindow):
         self.add_password_screen_widget.password_match_label.setStyleSheet("")
         self.statusBar().showMessage("Ready")
 
-    def edit_password_submit_button_click(self):
+    def attempt_to_edit_password(self):
         """
-        Modifies the existing password with the inputs that the user
-        entered and updates the database
+        Attempts to modify the existing password with the inputs that the user
+        entered then updates the database
         """
         password_id = self.edit_password_screen_widget.password_id
         new_account = self.edit_password_screen_widget.account_input.text()
@@ -240,6 +264,11 @@ class MainWindow(QMainWindow):
         elif len(password_input) == 0:
             self.edit_password_screen_widget.password_match_label.setText("Password is required")
             self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+
+        elif self.contains_unapproved_specials(password_input):
+            self.add_password_screen_widget.password_match_label.setText("Password can only have the "
+                                                                         "following special characters: " + SPECIALS)
+            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
         else:
             # Add password to the database
             edit_password_status = self.vault_cnx.edit_password(password_id, new_account, password_input)
@@ -256,7 +285,7 @@ class MainWindow(QMainWindow):
                 self.clear_edit_password_fields()
                 self.central_widget.setCurrentIndex(2)  # Route back to main screen
 
-    def edit_password_cancel_button_click(self):
+    def go_to_main_screen_cancel_edit(self):
         """
         Takes user back to main screen after clearing all edit screen input fields
         """
