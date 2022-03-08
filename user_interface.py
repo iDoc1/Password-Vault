@@ -12,7 +12,7 @@ from PyQt5 import QtCore
 from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, QPushButton, \
     QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QTableWidget, QTableWidgetItem, \
-    QCheckBox, QSpinBox, QMessageBox, QProgressBar
+    QCheckBox, QSpinBox, QMessageBox, QProgressBar, QMenu, QAction
 
 # Constants for allowed characters
 LOWERS = "abcdefghijklmnopqrstuvwxyz"
@@ -37,6 +37,9 @@ class MainWindow(QMainWindow):
         # Create VaultConnection object
         self.vault_cnx = VaultConnection()
 
+        # Create a menu bar object
+        self.account_menu = QMenu("Account Settings")
+
         # Create stacked widget and set central widget
         self.central_widget = QStackedWidget()
         self.setCentralWidget(self.central_widget)
@@ -59,6 +62,7 @@ class MainWindow(QMainWindow):
         self.main_screen_widget = None
         self.add_password_screen_widget = None
         self.edit_password_screen_widget = None
+        self.edit_master_account_screen_widget = None
 
         # Add all screen widgets to stacked widget indexes
         self.central_widget.addWidget(self.login_screen_widget)  # Index 0
@@ -102,19 +106,47 @@ class MainWindow(QMainWindow):
                 self.edit_password_screen_widget.edit_button.clicked.connect(self.attempt_to_edit_password)
                 self.edit_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_from_edit)
 
+                # Create EditMasterAccountScreen object
+                self.edit_master_account_screen_widget = EditMasterAccountScreen(self)
+
                 self.central_widget.addWidget(self.main_screen_widget)  # Index 2
                 self.central_widget.addWidget(self.add_password_screen_widget)  # Index 3
                 self.central_widget.addWidget(self.edit_password_screen_widget)  # Index 4
+                self.central_widget.addWidget(self.edit_master_account_screen_widget)  # Index 5
 
                 # Get master username and display on main screen
-                master_user = self.vault_cnx.get_master_username()
-                self.main_screen_widget.welcome_label.setText("Welcome, " + master_user)
+                self.display_master_username()
+
+                # Add account settings to menu bar
+                self.menuBar().addMenu(self.account_menu)
+                self.menuBar().setStyleSheet("background-color: lightGray")
+                account_action = QAction("Edit Master Account", self)
+                account_action.triggered.connect(self.go_to_edit_master_account_screen)
+                self.account_menu.addAction(account_action)
 
                 self.central_widget.setCurrentIndex(2)  # To main screen
                 self.setGeometry(600, 500, 550, 400)  # Make window larger
             else:
                 self.login_screen_widget.password_incorrect_label.setText("Incorrect password")
                 self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
+
+    def display_master_username(self):
+        """
+        Displays master username stored in database
+        """
+        master_user = self.vault_cnx.get_master_username()
+        self.main_screen_widget.welcome_label.setText("Welcome, " + master_user)
+
+    def go_to_edit_master_account_screen(self):
+        """
+        Creates an EditMasterAccountScreen widget then routes user to that
+        screen
+        """
+
+        # Change master username to current username before routing
+        master_username = self.vault_cnx.get_master_username()
+        self.edit_master_account_screen_widget.name_input.setText(master_username)
+        self.central_widget.setCurrentIndex(5)
 
     def go_to_create_account_screen(self):
         """
@@ -139,6 +171,11 @@ class MainWindow(QMainWindow):
 
             # Create user account in database
             self.vault_cnx.create_user(username, password_input)
+
+            # Reset create account screen input fields
+            self.create_account_screen_widget.name_input.setText("")
+            self.create_account_screen_widget.password_input.setText("")
+            self.create_account_screen_widget.reenter_input.setText("")
 
             # Reset login screen and reroute
             self.login_screen_widget.password_input.setText("")
@@ -360,7 +397,6 @@ class LoginScreen(QWidget):
         layout.addWidget(self.password_incorrect_label)
         layout.addWidget(self.create_account_label)
         layout.addWidget(self.create_account_button)
-
         self.setLayout(layout)
 
 
@@ -372,7 +408,7 @@ class CreateAccountScreen(QWidget):
 
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout()
+        self.layout = QVBoxLayout()
 
         # Create person account label
         account_icon_layout = QHBoxLayout()
@@ -443,15 +479,86 @@ class CreateAccountScreen(QWidget):
         self.create_account_button = QPushButton("Create Account")
 
         # Add all widgets to this layout
-        layout.addWidget(self.account_icon_widget)
-        layout.addWidget(self.instruct_label_widget)
-        layout.addWidget(self.name_widget)
-        layout.addWidget(self.password_widget)
-        layout.addWidget(self.reenter_widget)
-        layout.addWidget(self.password_match_label)
-        layout.addWidget(self.create_account_button)
+        self.layout.addWidget(self.account_icon_widget)
+        self.layout.addWidget(self.instruct_label_widget)
+        self.layout.addWidget(self.name_widget)
+        self.layout.addWidget(self.password_widget)
+        self.layout.addWidget(self.reenter_widget)
+        self.layout.addWidget(self.password_match_label)
+        self.layout.addWidget(self.create_account_button)
+        self.setLayout(self.layout)
 
-        self.setLayout(layout)
+
+class EditMasterAccountScreen(CreateAccountScreen):
+    """
+    This class is a modified version of the CreateAccountScreen that
+    allows the user to edit the master account
+    """
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.vault_cnx = self.parent.vault_cnx  # Database connection
+
+        # Modify text instructions
+        self.instruct_label.setText("Edit below information edit master account name and password")
+        self.password_label.setText("New\nPassword: ")
+        self.password_input.setPlaceholderText("Enter new password here")
+        self.reenter_input.setPlaceholderText("Re-enter new password here")
+        self.create_account_button.setText("Edit Master Account")
+
+        # Add cancel button
+        self.layout.removeWidget(self.create_account_button)  # Remove so layout can be changed
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.go_back_to_main_screen)
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.create_account_button)
+        button_layout.addWidget(self.cancel_button)
+
+        # Designate new slot for create account button
+        username = self.name_input.text()
+        password = self.password_input.text()
+        self.create_account_button.clicked.connect(self.update_master_user)
+
+        self.buttons_widget = QWidget(self)
+        self.buttons_widget.setLayout(button_layout)
+        self.layout.addWidget(self.buttons_widget)
+
+    def update_master_user(self):
+        """
+        Updates master user with new username and password
+        """
+
+        # Check if passwords are the same
+        if self.password_input.text() != self.reenter_input.text():
+            self.password_match_label.setText("Passwords must match")
+            self.password_match_label.setStyleSheet("background-color: yellow;")
+        else:
+            new_username = self.name_input.text()
+            new_password = self.password_input.text()
+
+            self.vault_cnx.edit_master_username(new_username)
+            self.vault_cnx.edit_master_password(new_password)
+
+            self.parent.display_master_username()
+            self.go_back_to_main_screen()
+
+    def go_back_to_main_screen(self):
+        """
+        Routes user back to main screen
+        """
+        self.clear_input_fields()
+        self.parent.central_widget.setCurrentIndex(2)
+
+    def clear_input_fields(self):
+        """
+        Clears username and password text inputs and stylesheet
+        """
+        self.name_input.setText("")
+        self.password_input.setText("")
+        self.reenter_input.setText("")
+        self.password_match_label.setText("")
+        self.password_match_label.setStyleSheet("")
 
 
 class MainScreen(QWidget):

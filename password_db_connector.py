@@ -49,6 +49,14 @@ class VaultConnection:
         """
         self.db_connection.close()
 
+    def test_default_password(self):
+        """
+        Returns True if the database user account still has the
+        default password set. Returns False if not.
+        :return: True if database user has default password
+        """
+        return self.test_db_connection("default")
+
     def test_db_connection(self, password):
         """
         Tests then closes a connection to the database with the given
@@ -70,14 +78,6 @@ class VaultConnection:
                 print(err)
         else:
             return True  # Given password works
-
-    def test_default_password(self):
-        """
-        Returns True if the database user account still has the
-        default password set. Returns False if not.
-        :return: True if database user has default password
-        """
-        return self.test_db_connection("default")
 
     def create_user(self, username, password):
         """
@@ -117,16 +117,59 @@ class VaultConnection:
             cnx.close()
             return True
 
+    def edit_master_username(self, new_username):
+        """
+        Updates master account with new username
+        :return: True if successful, False otherwise
+        """
+        try:
+            cursor = self.db_connection.cursor()
+            edit_username_query = "UPDATE PasswordVault.MasterAccount " \
+                                  "SET masterUser = %s WHERE id = 1;"
+
+            cursor.execute(edit_username_query, (new_username, ))
+
+            # Commit changes
+            self.db_connection.commit()
+            cursor.close()
+
+        except mysql.connector.Error as err:
+            print(err)
+            return False
+        else:
+            return True
+
+    def edit_master_password(self, new_password):
+        """
+        Updates master account with new password
+        :return: True if successful, False otherwise
+        """
+        try:
+            cursor = self.db_connection.cursor()
+            edit_password_query = f"SET PASSWORD = '{new_password}';"
+            cursor.execute(edit_password_query)
+
+            cursor.close()
+        except mysql.connector.Error as err:
+            print(err)
+            return False
+        else:
+            return True
+
     def get_master_username(self):
         """
         Returns the name of the master account username
-        :return: Master account username
+        :return: Master account username or None if not exists
         """
         cursor = self.db_connection.cursor()
         username_query = "SELECT masterUser FROM PasswordVault.MasterAccount;"
         cursor.execute(username_query)
 
-        return cursor.fetchone()[0]
+        master_username = cursor.fetchone()
+        if master_username is None:
+            return None
+        else:
+            return master_username[0]
 
     def fetch_all_passwords(self):
         """
