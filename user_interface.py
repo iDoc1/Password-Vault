@@ -14,7 +14,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QStackedWidget, 
     QLabel, QVBoxLayout, QLineEdit, QHBoxLayout, QTableWidget, QTableWidgetItem, \
     QCheckBox, QSpinBox, QMessageBox, QProgressBar
 
-
 # Constants for allowed characters
 LOWERS = "abcdefghijklmnopqrstuvwxyz"
 UPPERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -96,12 +95,12 @@ class MainWindow(QMainWindow):
                 # Create an AddPasswordScreen object and define button slots
                 self.add_password_screen_widget = AddPasswordScreen(self)
                 self.add_password_screen_widget.add_button.clicked.connect(self.attempt_to_add_password)
-                self.add_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_cancel_add)
+                self.add_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_from_add)
 
                 # Create an EditPasswordScreen object
                 self.edit_password_screen_widget = EditPasswordScreen(self)
                 self.edit_password_screen_widget.edit_button.clicked.connect(self.attempt_to_edit_password)
-                self.edit_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_cancel_edit)
+                self.edit_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_from_edit)
 
                 self.central_widget.addWidget(self.main_screen_widget)  # Index 2
                 self.central_widget.addWidget(self.add_password_screen_widget)  # Index 3
@@ -160,45 +159,78 @@ class MainWindow(QMainWindow):
         Creates a new account and password in the database then routes
         back to main screen if there are no issues with use inputs
         """
-        new_account = self.add_password_screen_widget.account_input.text()
-        password_input = self.add_password_screen_widget.password_input.text()
-        reenter_input = self.add_password_screen_widget.reenter_input.text()
 
-        # Check if passwords are the same
-        if password_input != reenter_input:
-            self.add_password_screen_widget.password_match_label.setText("Passwords must match")
-            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        # Only add password if there are no input errors
+        if not self.password_input_errors_exist(self.add_password_screen_widget):
 
-        # Check if account name was entered
-        elif len(new_account) == 0:
-            self.add_password_screen_widget.password_match_label.setText("Account name is required")
-            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
-
-        # Check if password input is empty
-        elif len(password_input) == 0:
-            self.add_password_screen_widget.password_match_label.setText("Password is required")
-            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
-
-        elif self.contains_unapproved_specials(password_input):
-            self.add_password_screen_widget.password_match_label.setText("Password can only have the "
-                                                                         "following special characters: " + SPECIALS)
-            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
-        else:
-
-            # Add password to the database
+            # Add password and account to the database
+            new_account = self.add_password_screen_widget.account_input.text()
+            password_input = self.add_password_screen_widget.password_input.text()
             add_password_status = self.vault_cnx.add_new_password(new_account, password_input)
 
             # Check if there was a database error
             if not add_password_status:
                 self.statusBar().showMessage("Database error while adding password.")
             else:
+                self.go_to_main_screen_from_add()
 
-                # Refresh main screen data
-                self.main_screen_widget.load_password_data()
+    def attempt_to_edit_password(self):
+        """
+        Attempts to modify the existing password with the inputs that the user
+        entered then updates the database
+        """
 
-                print("Password added to database")
-                self.clear_add_password_fields()
-                self.central_widget.setCurrentIndex(2)  # Route back to main screen
+        # Only edit password if no password input errors exist
+        if not self.password_input_errors_exist(self.edit_password_screen_widget):
+            password_id = self.edit_password_screen_widget.password_id
+            new_account = self.edit_password_screen_widget.account_input.text()
+            password_input = self.edit_password_screen_widget.password_input.text()
+
+            # Add password to the database
+            edit_password_status = self.vault_cnx.edit_password(password_id, new_account, password_input)
+
+            # Check if there was a database error
+            if not edit_password_status:
+                self.statusBar().showMessage("Database error while adding password.")
+            else:
+                self.go_to_main_screen_from_edit()
+
+    def password_input_errors_exist(self, add_or_edit_widget):
+        """
+        Checks for errors in the password entry fields for the add and edit screen widgets
+        :param add_or_edit_widget: the add or edit password screen widget
+        :return: True if there are no errors, False otherwise
+        """
+        new_account = add_or_edit_widget.account_input.text()
+        password_input = add_or_edit_widget.password_input.text()
+        reenter_input = add_or_edit_widget.reenter_input.text()
+
+        # Check if passwords are the same
+        if password_input != reenter_input:
+            add_or_edit_widget.password_match_label.setText("Passwords must match")
+            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+            return True
+
+        # Check if account name was entered
+        elif len(new_account) == 0:
+            add_or_edit_widget.password_match_label.setText("Account name is required")
+            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+            return True
+
+        # Check if password input is empty
+        elif len(password_input) == 0:
+            add_or_edit_widget.password_match_label.setText("Password is required")
+            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+            return True
+
+        elif self.contains_unapproved_specials(password_input):
+            add_or_edit_widget.password_match_label.setText("Password can only have the "
+                                                            "following special characters: " + SPECIALS)
+            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+            return True
+
+        else:
+            return False
 
     @staticmethod
     def contains_unapproved_specials(password):
@@ -213,98 +245,49 @@ class MainWindow(QMainWindow):
 
         return False
 
-    def go_to_main_screen_cancel_add(self):
+    def go_to_main_screen_from_add(self):
         """
         Takes user back to main screen after clearing all add screen input fields
         """
+        self.main_screen_widget.load_password_data()
         self.clear_add_password_fields()
         self.central_widget.setCurrentIndex(2)  # Back to main screen
+
+    def go_to_main_screen_from_edit(self):
+        """
+        Takes user back to main screen after clearing all edit screen input fields
+        """
+        self.main_screen_widget.load_password_data()
+        self.clear_edit_password_fields()
+        self.central_widget.setCurrentIndex(2)
 
     def clear_add_password_fields(self):
         """
         Clears all input fields for the add password screen
         """
-
-        # Clear user input fields and route back to main screen
-        self.add_password_screen_widget.account_input.clear()
-        self.add_password_screen_widget.password_input.clear()
-        self.add_password_screen_widget.reenter_input.clear()
-        self.add_password_screen_widget.generate_widget.special_chars_check.setChecked(False)
-        self.add_password_screen_widget.generate_widget.numbers_check.setChecked(False)
-        self.add_password_screen_widget.generate_widget.case_check.setCheckState(False)
-        self.add_password_screen_widget.generate_widget.char_length_box.setValue(12)  # Spinbox set to min value
-        self.add_password_screen_widget.password_match_label.setText("")
-        self.add_password_screen_widget.password_match_label.setStyleSheet("")
-        self.statusBar().showMessage("Ready")
-
-    def attempt_to_edit_password(self):
-        """
-        Attempts to modify the existing password with the inputs that the user
-        entered then updates the database
-        """
-        password_id = self.edit_password_screen_widget.password_id
-        new_account = self.edit_password_screen_widget.account_input.text()
-        password_input = self.edit_password_screen_widget.password_input.text()
-        reenter_input = self.edit_password_screen_widget.reenter_input.text()
-
-        # Check if passwords are the same
-        if password_input != reenter_input:
-            self.edit_password_screen_widget.password_match_label.setText("Passwords must match")
-            self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
-
-        # Check if account name was entered
-        elif len(new_account) == 0:
-            self.edit_password_screen_widget.password_match_label.setText("Account name is required")
-            self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
-
-        # Check if password input is empty
-        elif len(password_input) == 0:
-            self.edit_password_screen_widget.password_match_label.setText("Password is required")
-            self.edit_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
-
-        elif self.contains_unapproved_specials(password_input):
-            self.add_password_screen_widget.password_match_label.setText("Password can only have the "
-                                                                         "following special characters: " + SPECIALS)
-            self.add_password_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
-        else:
-            # Add password to the database
-            edit_password_status = self.vault_cnx.edit_password(password_id, new_account, password_input)
-
-            # Check if there was a database error
-            if not edit_password_status:
-                self.statusBar().showMessage("Database error while adding password.")
-            else:
-
-                # Refresh main screen data
-                self.main_screen_widget.load_password_data()
-
-                print("Password edited in database")
-                self.clear_edit_password_fields()
-                self.central_widget.setCurrentIndex(2)  # Route back to main screen
-
-    def go_to_main_screen_cancel_edit(self):
-        """
-        Takes user back to main screen after clearing all edit screen input fields
-        """
-        self.clear_edit_password_fields()
-        self.central_widget.setCurrentIndex(2)
+        self.clear_password_input_fields(self.add_password_screen_widget)
 
     def clear_edit_password_fields(self):
         """
         Clears all input fields for the edit password screen
         """
-
-        # Clear user input fields and route back to main screen
         self.edit_password_screen_widget.password_id = None
-        self.edit_password_screen_widget.account_input.clear()
-        self.edit_password_screen_widget.password_input.clear()
-        self.edit_password_screen_widget.reenter_input.clear()
-        self.edit_password_screen_widget.generate_widget.special_chars_check.setChecked(False)
-        self.edit_password_screen_widget.generate_widget.numbers_check.setChecked(False)
-        self.edit_password_screen_widget.generate_widget.case_check.setCheckState(False)
-        self.edit_password_screen_widget.generate_widget.char_length_box.setValue(12)  # Spinbox set to min value
-        self.edit_password_screen_widget.password_match_label.setText("")
-        self.edit_password_screen_widget.password_match_label.setStyleSheet("")
+        self.clear_password_input_fields(self.edit_password_screen_widget)
+
+    def clear_password_input_fields(self, add_or_edit_widget):
+        """
+        Clears password input fields for the given add or edit screen widget
+        :param add_or_edit_widget: the add or edit password screen widget
+        """
+        add_or_edit_widget.account_input.clear()
+        add_or_edit_widget.password_input.clear()
+        add_or_edit_widget.reenter_input.clear()
+        add_or_edit_widget.generate_widget.special_chars_check.setChecked(False)
+        add_or_edit_widget.generate_widget.numbers_check.setChecked(False)
+        add_or_edit_widget.generate_widget.case_check.setCheckState(False)
+        add_or_edit_widget.generate_widget.char_length_box.setValue(12)  # Spinbox set to min value
+        add_or_edit_widget.password_match_label.setText("")
+        add_or_edit_widget.password_match_label.setStyleSheet("")
         self.statusBar().showMessage("Ready")
 
 
@@ -555,7 +538,7 @@ class MainScreen(QWidget):
             self.password_table.setCellWidget(table_row + 1, 2, self.copy_button)
             self.copy_button.setToolTip("Copy for 15 seconds")
             self.copy_button.clicked.connect(lambda state, password=curr_password:
-                                        self.copy_button_click(password))
+                                             self.copy_button_click(password))
 
             # Add edit button with signal connected to a function that displays edit screen
             edit_button = QPushButton("Edit")
