@@ -1,11 +1,7 @@
 # Author: Ian Docherty
 # Description: The below functions take a password and evaluate it based on its
-#              calculated information entropy. For randomly generated passwords,
-#              the information bit entropy is calculated using the formula:
-#              H = log2(N^L), where L is the password length and N is the number
-#              of possible symbols to choose from. The bit entropy is one method
-#              used to describe how many possible permutations a brute force attack
-#              would need to explore to guess all possible passwords.
+#              calculated information entropy. See discussion section in the
+#              README for more info on information entropy.
 
 import math
 
