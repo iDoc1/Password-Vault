@@ -39,7 +39,7 @@ Main Screen
 Add a weak password  
 ![Add a weak password](/screenshots/add_weak_password.png)  
 Add a strong password  
-![Add a strong password](/screenshots/add_strong_password.png)   
+![Add a strong password](/screenshots/add_very_strong_password.png)   
 Copy a stored password  
 ![Copy password](/screenshots/copy_password.png)  
 Edit an existing password  
