@@ -79,8 +79,10 @@ class MainWindow(QMainWindow):
 
     def go_to_login_screen(self):
         """
-        Shows the login page
+        Clears any password input and shows login screen
         """
+        self.menuBar().clear()
+        self.reset_login_screen()
         self.central_widget.setCurrentIndex(0)
 
     def attempt_to_login(self):
@@ -95,9 +97,15 @@ class MainWindow(QMainWindow):
 
             # If password is correct, create remaining screens and go to main screen
             if self.vault_cnx.connect_to_db(self.login_screen_widget.password_input.text()):
+
+                self.add_account_settings_to_menu_bar()
+
+                if self.screens_already_exist():
+                    self.central_widget.setCurrentIndex(2)
+                    return
+
                 self.create_remaining_screen_widgets()
                 self.display_master_username()
-                self.add_account_settings_to_menu_bar()
 
                 # Go to main screen and enlarge window
                 self.central_widget.setCurrentIndex(2)
@@ -124,6 +132,17 @@ class MainWindow(QMainWindow):
         self.create_edit_password_screen_widget()
         self.edit_master_account_screen_widget = EditMasterAccountScreen(self)
         self.add_remaining_widgets_to_stack()
+
+    def screens_already_exist(self):
+        """
+        Returns True if the main, add password, edit password, and edit master
+        account screens
+        """
+        main_exists = self.main_screen_widget is not None
+        add_exists = self.add_password_screen_widget is not None
+        edit_exists = self.edit_password_screen_widget is not None
+        edit_master_exists = self.edit_master_account_screen_widget is not None
+        return main_exists and add_exists and edit_exists and edit_master_exists
 
     def add_remaining_widgets_to_stack(self):
         """
@@ -168,13 +187,20 @@ class MainWindow(QMainWindow):
 
     def add_account_settings_to_menu_bar(self):
         """
-        Adds a dropdown menu called 'Account Settings' to the menu bar
+        Adds dropdown menus called 'Account Settings' and 'Log out' to the menu bar
         """
+        self.menuBar().clear()
+        self.account_menu.clear()
         self.menuBar().addMenu(self.account_menu)
         self.menuBar().setStyleSheet("background-color: lightGray")
+
         account_action = QAction("Edit Master Account", self)
         account_action.triggered.connect(self.go_to_edit_master_account_screen)
         self.account_menu.addAction(account_action)
+
+        logout_action = QAction("Sign Out", self)
+        logout_action.triggered.connect(self.go_to_login_screen)
+        self.account_menu.addAction(logout_action)
 
     def show_failed_login_message(self):
         """
@@ -595,8 +621,6 @@ class EditMasterAccountScreen(CreateAccountScreen):
         button_layout.addWidget(self.cancel_button)
 
         # Designate new slot for create account button
-        username = self.name_input.text()
-        password = self.password_input.text()
         self.create_account_button.clicked.connect(self.update_master_user)
 
         self.buttons_widget = QWidget(self)
@@ -688,19 +712,9 @@ class MainScreen(QWidget):
         Loads all password data from the database into the table
         """
 
-        # Get table data using database connection
+        # Get table data and build table
         password_data = self.parent.vault_cnx.fetch_all_passwords()
-
-        # Define table size
-        self.password_table.setRowCount(len(password_data) + 1)
-        self.password_table.setColumnCount(5)
-
-        # Populate header row
-        self.password_table.setItem(0, 0, QTableWidgetItem("Account Name"))
-        self.password_table.setItem(0, 1, QTableWidgetItem("Password"))
-        self.password_table.setItem(0, 2, QTableWidgetItem("Copy Password"))
-        self.password_table.setItem(0, 3, QTableWidgetItem("Edit Password"))
-        self.password_table.setItem(0, 4, QTableWidgetItem("Delete Password"))
+        self.build_empty_table(password_data)
 
         # Populate table data
         table_row = 0
@@ -737,12 +751,28 @@ class MainScreen(QWidget):
             delete_button = QPushButton("Delete")
             self.password_table.setCellWidget(table_row + 1, 4, delete_button)
             delete_button.clicked.connect(lambda state, password_id=curr_id, account=curr_account:
-                                          self.delete_button_click(password_id, account))
+                                          self.show_delete_dialog_box(password_id, account))
 
             table_row += 1
 
         # Resize width of first column
         self.password_table.resizeColumnToContents(0)
+
+    def build_empty_table(self, password_data):
+        """
+        Builds the password table with a header row and no data yet
+        """
+
+        # Define table size
+        self.password_table.setRowCount(len(password_data) + 1)
+        self.password_table.setColumnCount(5)
+
+        # Populate header row
+        self.password_table.setItem(0, 0, QTableWidgetItem("Account Name"))
+        self.password_table.setItem(0, 1, QTableWidgetItem("Password"))
+        self.password_table.setItem(0, 2, QTableWidgetItem("Copy Password"))
+        self.password_table.setItem(0, 3, QTableWidgetItem("Edit Password"))
+        self.password_table.setItem(0, 4, QTableWidgetItem("Delete Password"))
 
     def copy_button_click(self, password):
         """
@@ -760,14 +790,13 @@ class MainScreen(QWidget):
         Populates the edit screen with the existing account and password and takes
         user to the edit screen
         """
-        print("Showing edit screen for account: ", account)
         self.parent.edit_password_screen_widget.password_id = password_id
         self.parent.edit_password_screen_widget.account_input.setText(account)
         self.parent.edit_password_screen_widget.password_input.setText(password)
         self.parent.edit_password_screen_widget.reenter_input.setText(password)
         self.parent.central_widget.setCurrentIndex(4)
 
-    def delete_button_click(self, password_id, account):
+    def show_delete_dialog_box(self, password_id, account):
         """
         Displays a popup button when the delete button is pressed
         """
@@ -794,7 +823,6 @@ class MainScreen(QWidget):
             if not delete_status:
                 self.parent.statusBar().showMessage("Database error while deleting password.")
 
-            print("Password for account " + account + " deleted")
             self.load_password_data()
 
 
@@ -941,8 +969,7 @@ class AddEditPasswordScreen(QWidget):
         else:
             color = "#18b549"
 
-        self.password_strength_bar.setStyleSheet("QProgressBar::chunk {"
-                                                 "background-color: " + color + "; }")
+        self.password_strength_bar.setStyleSheet("QProgressBar::chunk { background-color: " + color + "; }")
 
 
 class GeneratePasswordWidget(QWidget):
