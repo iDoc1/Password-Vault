@@ -83,6 +83,11 @@ class MainWindow(QMainWindow):
         """
         self.menuBar().clear()
         self.reset_login_screen()
+
+        # Clear edit master account fields if necessary
+        if self.edit_master_account_screen_widget is not None:
+            self.edit_master_account_screen_widget.clear_input_fields()
+
         self.central_widget.setCurrentIndex(0)
 
     def attempt_to_login(self):
