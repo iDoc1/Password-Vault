@@ -119,13 +119,13 @@ class VaultConnection:
 
     def edit_master_username(self, new_username):
         """
-        Updates master account with new username
+        Inserts a new username into master account table
         :return: True if successful, False otherwise
         """
         try:
             cursor = self.db_connection.cursor()
             edit_username_query = "UPDATE PasswordVault.MasterAccount " \
-                                  "SET masterUser = %s WHERE id = 1;"
+                                  "SET masterUser = %s WHERE id >= 1;"
 
             cursor.execute(edit_username_query, (new_username, ))
 

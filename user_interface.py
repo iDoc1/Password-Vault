@@ -67,7 +67,8 @@ class MainWindow(QMainWindow):
         # Add all screen widgets to stacked widget indexes
         self.central_widget.addWidget(self.login_screen_widget)  # Index 0
         self.central_widget.addWidget(self.create_account_screen_widget)  # Index 1
-        self.central_widget.setCurrentIndex(0)  # Start at LoginScreen
+
+        self.go_to_login_screen()
 
         # Set window geometry and show window
         self.setGeometry(600, 500, 400, 250)
@@ -76,59 +77,87 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Ready")
         self.show()
 
+    def go_to_login_screen(self):
+        """
+        Shows the login page
+        """
+        self.central_widget.setCurrentIndex(0)
+
     def attempt_to_login(self):
         """
-        Attempts to login to master account
+        Attempts to login to master account. Displays message if attempt fails.
         """
 
         # Check if user has an account. If not, display message.
         if self.vault_cnx.test_default_password():
-            self.login_screen_widget.password_incorrect_label.setText("You must create a user account to begin.")
-            self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
-            self.login_screen_widget.login_button.setEnabled(False)  # Disable login button
-            self.login_screen_widget.create_account_button.setEnabled(True)  # Enable create account button
+            self.show_create_account_message()
         else:
 
-            # If password is correct, go to main screen, otherwise display error message
+            # If password is correct, create remaining screens and go to main screen
             if self.vault_cnx.connect_to_db(self.login_screen_widget.password_input.text()):
-
-                # Create Main Screen widget and define button slot
-                self.main_screen_widget = MainScreen(self)  # Set MainWindow as parent widget
-                self.main_screen_widget.add_password_button.clicked.connect(self.go_to_add_password_screen)
-
-                # Create an AddPasswordScreen object and define button slots
-                self.add_password_screen_widget = AddPasswordScreen(self)
-                self.add_password_screen_widget.add_button.clicked.connect(self.attempt_to_add_password)
-                self.add_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_from_add)
-
-                # Create an EditPasswordScreen object
-                self.edit_password_screen_widget = EditPasswordScreen(self)
-                self.edit_password_screen_widget.edit_button.clicked.connect(self.attempt_to_edit_password)
-                self.edit_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_from_edit)
-
-                # Create EditMasterAccountScreen object
-                self.edit_master_account_screen_widget = EditMasterAccountScreen(self)
-
-                self.central_widget.addWidget(self.main_screen_widget)  # Index 2
-                self.central_widget.addWidget(self.add_password_screen_widget)  # Index 3
-                self.central_widget.addWidget(self.edit_password_screen_widget)  # Index 4
-                self.central_widget.addWidget(self.edit_master_account_screen_widget)  # Index 5
-
-                # Get master username and display on main screen
+                self.create_remaining_screen_widgets()
                 self.display_master_username()
+                self.add_account_settings_to_menu_bar()
 
-                # Add account settings to menu bar
-                self.menuBar().addMenu(self.account_menu)
-                self.menuBar().setStyleSheet("background-color: lightGray")
-                account_action = QAction("Edit Master Account", self)
-                account_action.triggered.connect(self.go_to_edit_master_account_screen)
-                self.account_menu.addAction(account_action)
-
-                self.central_widget.setCurrentIndex(2)  # To main screen
-                self.setGeometry(600, 500, 550, 400)  # Make window larger
+                # Go to main screen and enlarge window
+                self.central_widget.setCurrentIndex(2)
+                self.setGeometry(600, 500, 550, 400)
             else:
-                self.login_screen_widget.password_incorrect_label.setText("Incorrect password")
-                self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
+                self.show_failed_login_message()
+
+    def show_create_account_message(self):
+        """
+        Displays message to user if their login attempt fails
+        """
+        self.login_screen_widget.password_incorrect_label.setText("You must create a user account to begin.")
+        self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
+        self.login_screen_widget.login_button.setEnabled(False)  # Disable login button
+        self.login_screen_widget.create_account_button.setEnabled(True)  # Enable create account button
+
+    def create_remaining_screen_widgets(self):
+        """
+        Initializes objects for the main, add password, edit password, and edit
+        master account screens
+        """
+        self.create_main_screen_widget()
+        self.create_add_password_screen_widget()
+        self.create_edit_password_screen_widget()
+        self.edit_master_account_screen_widget = EditMasterAccountScreen(self)
+        self.add_remaining_widgets_to_stack()
+
+    def add_remaining_widgets_to_stack(self):
+        """
+        Adds the main, add password, edit password, and edit master account screen
+        widgets to the central stacked widget
+        """
+        self.central_widget.addWidget(self.main_screen_widget)  # Index 2
+        self.central_widget.addWidget(self.add_password_screen_widget)  # Index 3
+        self.central_widget.addWidget(self.edit_password_screen_widget)  # Index 4
+        self.central_widget.addWidget(self.edit_master_account_screen_widget)  # Index 5
+
+    def create_main_screen_widget(self):
+        """
+        Creates object for main screen and defines add password button slot
+        """
+        # Create Main Screen widget and define button slot
+        self.main_screen_widget = MainScreen(self)  # Set MainWindow as parent widget
+        self.main_screen_widget.add_password_button.clicked.connect(self.go_to_add_password_screen)
+
+    def create_add_password_screen_widget(self):
+        """
+        Creates object for add password screen and defines button slots
+        """
+        self.add_password_screen_widget = AddPasswordScreen(self)
+        self.add_password_screen_widget.add_button.clicked.connect(self.attempt_to_add_password)
+        self.add_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_from_add)
+
+    def create_edit_password_screen_widget(self):
+        """
+        Creates object for edit password screen and defines button slots
+        """
+        self.edit_password_screen_widget = EditPasswordScreen(self)
+        self.edit_password_screen_widget.edit_button.clicked.connect(self.attempt_to_edit_password)
+        self.edit_password_screen_widget.cancel_button.clicked.connect(self.go_to_main_screen_from_edit)
 
     def display_master_username(self):
         """
@@ -136,6 +165,23 @@ class MainWindow(QMainWindow):
         """
         master_user = self.vault_cnx.get_master_username()
         self.main_screen_widget.welcome_label.setText("Welcome, " + master_user)
+
+    def add_account_settings_to_menu_bar(self):
+        """
+        Adds a dropdown menu called 'Account Settings' to the menu bar
+        """
+        self.menuBar().addMenu(self.account_menu)
+        self.menuBar().setStyleSheet("background-color: lightGray")
+        account_action = QAction("Edit Master Account", self)
+        account_action.triggered.connect(self.go_to_edit_master_account_screen)
+        self.account_menu.addAction(account_action)
+
+    def show_failed_login_message(self):
+        """
+        Shows message when incorrect password is entered
+        """
+        self.login_screen_widget.password_incorrect_label.setText("Incorrect password")
+        self.login_screen_widget.password_incorrect_label.setStyleSheet("background-color: yellow;")
 
     def go_to_edit_master_account_screen(self):
         """
@@ -150,8 +196,7 @@ class MainWindow(QMainWindow):
 
     def go_to_create_account_screen(self):
         """
-        Creates and shows the CreateAccountScreen widget to allow user
-        to create a master account and password
+        Shows the create account screen
         """
         self.central_widget.setCurrentIndex(1)
 
@@ -168,22 +213,29 @@ class MainWindow(QMainWindow):
             self.create_account_screen_widget.password_match_label.setText("Passwords must match")
             self.create_account_screen_widget.password_match_label.setStyleSheet("background-color: yellow;")
         else:
-
-            # Create user account in database
             self.vault_cnx.create_user(username, password_input)
+            self.clear_create_account_screen()
+            self.reset_login_screen()
+            self.go_to_login_screen()
 
-            # Reset create account screen input fields
-            self.create_account_screen_widget.name_input.setText("")
-            self.create_account_screen_widget.password_input.setText("")
-            self.create_account_screen_widget.reenter_input.setText("")
+    def clear_create_account_screen(self):
+        """
+        Clears all inputs on the create account screen
+        """
+        self.create_account_screen_widget.name_input.setText("")
+        self.create_account_screen_widget.password_input.setText("")
+        self.create_account_screen_widget.reenter_input.setText("")
 
-            # Reset login screen and reroute
-            self.login_screen_widget.password_input.setText("")
-            self.login_screen_widget.login_button.setEnabled(True)  # Re-enable login button
-            self.login_screen_widget.create_account_button.setEnabled(False)  # Disable create account button
-            self.login_screen_widget.password_incorrect_label.setStyleSheet("")  # Reset label color
-            self.login_screen_widget.password_incorrect_label.setText("")
-            self.central_widget.setCurrentIndex(0)  # Route back to login page
+    def reset_login_screen(self):
+        """
+        Clears all login screen inputs then disables the create account button
+        so user only has the choice to log in
+        """
+        self.login_screen_widget.password_input.setText("")
+        self.login_screen_widget.login_button.setEnabled(True)  # Re-enable login button
+        self.login_screen_widget.create_account_button.setEnabled(False)  # Disable create account button
+        self.login_screen_widget.password_incorrect_label.setStyleSheet("")  # Reset label color
+        self.login_screen_widget.password_incorrect_label.setText("")
 
     def go_to_add_password_screen(self):
         """
@@ -244,30 +296,57 @@ class MainWindow(QMainWindow):
 
         # Check if passwords are the same
         if password_input != reenter_input:
-            add_or_edit_widget.password_match_label.setText("Passwords must match")
-            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
-            return True
+            return self.show_password_mismatch_message(add_or_edit_widget)
 
         # Check if account name was entered
         elif len(new_account) == 0:
-            add_or_edit_widget.password_match_label.setText("Account name is required")
-            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
-            return True
+            return self.show_missing_account_message(add_or_edit_widget)
 
         # Check if password input is empty
         elif len(password_input) == 0:
-            add_or_edit_widget.password_match_label.setText("Password is required")
-            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
-            return True
+            return self.show_missing_password_message(add_or_edit_widget)
 
         elif self.contains_unapproved_specials(password_input):
-            add_or_edit_widget.password_match_label.setText("Password can only have the "
-                                                            "following special characters: " + SPECIALS)
-            add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
-            return True
-
+            return self.show_illegal_special_chars_message(add_or_edit_widget)
         else:
             return False
+
+    def show_password_mismatch_message(self, add_or_edit_widget):
+        """
+        Displays message when password don't match and returns True to
+        indicate password don't match
+        """
+        add_or_edit_widget.password_match_label.setText("Passwords must match")
+        add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        return True
+
+    def show_missing_account_message(self, add_or_edit_widget):
+        """
+        Displays message when account name is missing and returns True to
+        indicate this
+        """
+        add_or_edit_widget.password_match_label.setText("Account name is required")
+        add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        return True
+
+    def show_missing_password_message(self, add_or_edit_widget):
+        """
+        Displays message when password input is missing and returns True to
+        indicate this
+        """
+        add_or_edit_widget.password_match_label.setText("Password is required")
+        add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        return True
+
+    def show_illegal_special_chars_message(self, add_or_edit_widget):
+        """
+        Displays message when password input contains illegal special characters
+        and returns True to indicate this
+        """
+        add_or_edit_widget.password_match_label.setText("Password can only have the "
+                                                        "following special characters: " + SPECIALS)
+        add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
+        return True
 
     @staticmethod
     def contains_unapproved_specials(password):
