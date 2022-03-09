@@ -44,6 +44,10 @@ Copy a stored password
 ![Copy password](/screenshots/copy_password.png)  
 Edit an existing password  
 ![Edit existing password](/screenshots/edit_password.png)  
+Account Menu  
+![Account Menu](/screenshots/account_menu.png)  
+Modify Master Account  
+![Master Account](/screenshots/edit_master_account.png)  
 
 ### Discussion: Password Bit Entropy
 The password strength function in this application uses a calculation known
