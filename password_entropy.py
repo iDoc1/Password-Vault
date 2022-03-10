@@ -27,9 +27,7 @@ def get_entropy(password):
     number_of_symbols = 26  # Base password only has 26 lowercase chars allowed
 
     # Check if any uppercase, numbers, or special chars exist in given password
-    uppercase_found = False
-    number_found = False
-    special_found = False
+    uppercase_found, number_found, special_found = False, False, False
     for char in password:
 
         if char in UPPERS and not uppercase_found:
