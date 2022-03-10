@@ -163,7 +163,6 @@ class MainWindow(QMainWindow):
         """
         Creates object for main screen and defines add password button slot
         """
-        # Create Main Screen widget and define button slot
         self.main_screen_widget = MainScreen(self)  # Set MainWindow as parent widget
         self.main_screen_widget.add_password_button.clicked.connect(self.go_to_add_password_screen)
 
@@ -220,7 +219,7 @@ class MainWindow(QMainWindow):
         screen
         """
 
-        # Change master username to current username before routing
+        # Display current username in the username input prior to routing
         master_username = self.vault_cnx.get_master_username()
         self.edit_master_account_screen_widget.name_input.setText(master_username)
         self.central_widget.setCurrentIndex(5)
@@ -379,8 +378,7 @@ class MainWindow(QMainWindow):
         add_or_edit_widget.password_match_label.setStyleSheet("background-color: yellow;")
         return True
 
-    @staticmethod
-    def contains_unapproved_specials(password):
+    def contains_unapproved_specials(self, password):
         """
         Returns True if the given password contains special characters not in
         the approved special characters constant SPECIALS

@@ -87,21 +87,8 @@ class VaultConnection:
         :return: True if account creation successful, False otherwise
         """
 
-        # Connect to database with default password
-        try:
-            cnx = mysql.connector.connect(user=self.master_username,
-                                          password='default',
-                                          database='passwordvault')
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                print("Incorrect username or password")
-            elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                print("Database does not exist")
-            else:
-                print(err)
-
-            return False
-        else:
+        cnx = self._try_connect_with_default()
+        if cnx:
 
             # Insert name of user into master account table
             cursor = cnx.cursor()
@@ -116,6 +103,27 @@ class VaultConnection:
             cursor.close()
             cnx.close()
             return True
+
+    def _try_connect_with_default(self):
+        """
+        Attempts to connect to the database using the default password.
+        :return: Connection if successful, None otherwise
+        """
+        try:
+            cnx = mysql.connector.connect(user=self.master_username,
+                                          password='default',
+                                          database='passwordvault')
+            return cnx
+
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                print("Incorrect username or password")
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                print("Database does not exist")
+            else:
+                print(err)
+
+            return None
 
     def edit_master_username(self, new_username):
         """
