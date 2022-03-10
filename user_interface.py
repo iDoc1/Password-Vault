@@ -959,7 +959,13 @@ class AddEditPasswordScreen(QWidget):
         password_strength_with_bits = password_strength_text + " (" + str(round(bit_entropy, 2)) + " bits)"
         self.password_strength_bar.setFormat(password_strength_with_bits)
 
-        # Change color depending on password strength
+        self.set_color_of_password_strength_bar(password_strength_text)
+
+    def set_color_of_password_strength_bar(self, password_strength_text):
+        """
+        Sets the color of the password strength bar given a string of text
+        describing the password strength
+        """
         if password_strength_text == "Very Weak" or password_strength_text == "Weak":
             color = "red"
         elif password_strength_text == "Moderately Strong":
