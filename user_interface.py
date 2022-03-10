@@ -944,10 +944,7 @@ class AddEditPasswordScreen(QWidget):
         """
         This method is called every time the password input field is changed. The
         password bit entropy is calculated and the corresponding strength is
-        displayed. A very strong password is considered to have 128 entropy bits
-        or more, so the progress bar displays password strength out of 150 bits,
-        which leaves room so that a Strong password is shown to still have room
-        for improvement.
+        displayed.
         """
         bit_entropy = password_entropy.get_entropy(self.password_input.text())
         password_strength_text = password_entropy.get_password_strength(bit_entropy)
