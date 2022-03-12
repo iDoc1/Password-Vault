@@ -5,7 +5,7 @@ This app was created as my portfolio project for CS 361 - Software Engineering I
 I came up with an idea for a personal project and used Agile software engineering methods to build that 
 project.
 
-Video demonstrating project: https://youtu.be/298M75vpZW0
+Video demonstrating project: https://youtu.be/wa4O0KlOgR8
 
 This app allows a user to create a master password which they can use to access their stored
 passwords for other accounts. Once the user creates a master account, they can log in to the
